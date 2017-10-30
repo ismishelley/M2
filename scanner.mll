@@ -31,7 +31,7 @@ rule token = parse
 | "for"    { FOR }
 | "while"  { WHILE }
 | "return" { RETURN }
-| "switch" { SWITCH}
+| "switch" { SWITCH} /* are we doing switch statements? */
 | "default"{ DEFAULT }
 | "break"  { BREAK }
 | "continue" { CONTINUE }
