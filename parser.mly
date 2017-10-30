@@ -11,6 +11,7 @@ open Ast
 %token INT FLOAT DOUBLE CHAR STRING MATRIX BOOL VOID
 %token NEW MAIN STRUCT
 %token <int> LITERAL
+%token <float> FLOAT_LITERAL
 %token <string> DATAID
 %token <char> MATHID
 %token EOF
@@ -93,6 +94,7 @@ expr_opt:
 
 expr:
     LITERAL          { Literal($1) }
+  | FLOAT_LITERAL    { Fliteral($1) }
   | TRUE             { BoolLit(true) }
   | FALSE            { BoolLit(false) }
   | DATAID           { DataId($1) }
