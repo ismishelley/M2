@@ -11,7 +11,7 @@ type bind = typ * string
 
 type expr =
     Literal of int
-  | MLiteral of Matrix
+  | MLiteral of matrix
   | Fliteral of float
   | BoolLit of bool
   | DataId of string
