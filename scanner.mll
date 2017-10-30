@@ -49,6 +49,9 @@ rule token = parse
 | "main"   { MAIN }
 | "struct" { STRUCT }
 | ['0'-'9']+ as lxm { LITERAL(int_of_string lxm) }
+| ['0'-'9']* '.' ['0'-'9']+ as lxm { FLOAT_LITERAL(float_of_string lxm) }
+/* are we also doing the regular expression for double and float here? And are we using both float and double? */
+
 | ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { DATAID(lxm) }
 | ['a'-'z'] { MATHID }
 | eof { EOF }
@@ -59,5 +62,5 @@ and commentB = parse
 | _    { commentB lexbuf }
 
 and commentS = parse
-  "\n" { token lexbuf}
+  ['\n' '\r'] { token lexbuf} /* In Mac OS \r also means new line*/
 | _    { commentS lexbuf }
