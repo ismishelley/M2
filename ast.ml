@@ -5,14 +5,15 @@ type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
 
 type uop = Neg | Not
 
-type typ = Int | Bool | Void
+type typ = Int | Float | Double | Char | String | Matrix | Bool | Void
 
 type bind = typ * string
 
 type expr =
     Literal of int
   | BoolLit of bool
-  | Id of string
+  | DataId of string
+  | MathId of char
   | Binop of expr * op * expr
   | Unop of uop * expr
   | Assign of string * expr
@@ -61,7 +62,8 @@ let rec string_of_expr = function
     Literal(l) -> string_of_int l
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
-  | Id(s) -> s
+  | DataId(s) -> s
+  | MathId(s) -> s
   | Binop(e1, o, e2) ->
       string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
   | Unop(o, e) -> string_of_uop o ^ string_of_expr e
@@ -85,6 +87,11 @@ let rec string_of_stmt = function
 
 let string_of_typ = function
     Int -> "int"
+  | Float -> "float"
+  | Double -> "double"
+  | Char -> "char"
+  | String -> "string"
+  | Matrix -> "Matrix"
   | Bool -> "bool"
   | Void -> "void"
 
