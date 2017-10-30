@@ -57,6 +57,11 @@ formal_list:
 
 typ:
     INT { Int }
+  | FLOAT {Float}
+  | DOUBLE {Double}
+  | CHAR {Char}
+  | STRING {String}
+  | MATRIX {Matrix}
   | BOOL { Bool }
   | VOID { Void }
 
@@ -90,7 +95,8 @@ expr:
     LITERAL          { Literal($1) }
   | TRUE             { BoolLit(true) }
   | FALSE            { BoolLit(false) }
-  | DATAID               { Id($1) }
+  | DATAID           { DataId($1) }
+  | MATHID           { MathId($1) }
   | expr PLUS   expr { Binop($1, Add,   $3) }
   | expr MINUS  expr { Binop($1, Sub,   $3) }
   | expr TIMES  expr { Binop($1, Mult,  $3) }
@@ -107,6 +113,7 @@ expr:
   | NOT expr         { Unop(Not, $2) }
   | DATAID ASSIGN expr   { Assign($1, $3) }
   | DATAID LPAREN actuals_opt RPAREN { Call($1, $3) }
+  (* Do we use different assignment rules for MATHID? *)
   | LPAREN expr RPAREN { $2 }
 
 actuals_opt:
