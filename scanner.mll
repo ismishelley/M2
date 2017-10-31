@@ -31,13 +31,11 @@ rule token = parse
 | "for"    { FOR }
 | "while"  { WHILE }
 | "return" { RETURN }
-| "switch" { SWITCH} /* are we doing switch statements? */
 | "default"{ DEFAULT }
 | "break"  { BREAK }
 | "continue" { CONTINUE }
 | "int"    { INT }
 | "float"  { FLOAT }
-| "double" { DOUBLE }
 | "char"   { CHAR }
 | "string" { STRING }
 | "Matrix" { MATRIX }
@@ -52,8 +50,7 @@ rule token = parse
 | ['0'-'9']* '.' ['0'-'9']+ as lxm { FLOAT_LITERAL(float_of_string lxm) }
 /* are we also doing the regular expression for double and float here? And are we using both float and double? */
 
-| ['A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { DATAID(lxm) }
-| ['a'-'z'] { MATHID }
+| ['a-z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { DATAID(lxm) }
 | eof { EOF }
 | _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
