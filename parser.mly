@@ -13,7 +13,6 @@ open Ast
 %token <int> LITERAL
 %token <float> FLOAT_LITERAL
 %token <string> DATAID
-%token <char> MATHID
 %token EOF
 
 %nonassoc NOELSE
@@ -59,7 +58,6 @@ formal_list:
 typ:
     INT { Int }
   | FLOAT {Float}
-  | DOUBLE {Double}
   | CHAR {Char}
   | STRING {String}
   | MATRIX {Matrix}
@@ -100,7 +98,6 @@ expr:
   | TRUE             { BoolLit(true) }
   | FALSE            { BoolLit(false) }
   | DATAID           { DataId($1) }
-  | MATHID           { MathId($1) }
   | expr PLUS   expr { Binop($1, Add,   $3) }
   | expr MINUS  expr { Binop($1, Sub,   $3) }
   | expr TIMES  expr { Binop($1, Mult,  $3) }
