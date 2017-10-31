@@ -91,6 +91,7 @@ stmt:
 expr_opt:
     /* nothing */ { Noexpr }
   | expr          { $1 }
+  | matrix        { $1 }
 
 expr:
     LITERAL          { Literal($1) }
