@@ -94,6 +94,7 @@ expr_opt:
 
 expr:
     LITERAL          { Literal($1) }
+  | matrix.       { $1 }
   | FLOAT_LITERAL    { Fliteral($1) }
   | TRUE             { BoolLit(true) }
   | FALSE            { BoolLit(false) }
@@ -117,6 +118,9 @@ expr:
   | DATAID LPAREN actuals_opt RPAREN { Call($1, $3) }
   (* Do we use different assignment rules for MATHID? *)
   | LPAREN expr RPAREN { $2 }
+  
+matrix:
+
 
 actuals_opt:
     /* nothing */ { [] }
