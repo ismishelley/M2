@@ -39,7 +39,8 @@ let check (globals, functions) =
   report_duplicate (fun n -> "duplicate global " ^ n) (List.map snd globals);
 
   (**** Checking Functions ****)
-
+  
+  (**** Why the if statement is true then raise error? I thought if print not in list then will raise an error ****)
   if List.mem "print" (List.map (fun fd -> fd.fname) functions)
   then raise (Failure ("function print may not be defined")) else ();
 
