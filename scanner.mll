@@ -48,9 +48,7 @@ rule token = parse
 | "struct" { STRUCT }
 | ['0'-'9']+ as lxm { LITERAL(int_of_string lxm) }
 | ['0'-'9']* '.' ['0'-'9']+ as lxm { FLOAT_LITERAL(float_of_string lxm) }
-/* are we also doing the regular expression for double and float here? And are we using both float and double? */
-
-| ['a-z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { DATAID(lxm) }
+| ['a-z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
 | eof { EOF }
 | _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
