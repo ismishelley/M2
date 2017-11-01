@@ -14,7 +14,7 @@ type expr =
   | MLiteral of matrix
   | Fliteral of float
   | BoolLit of bool
-  | DataId of string
+  | Id of string
   | Binop of expr * op * expr
   | Unop of uop * expr
   | Assign of string * expr
@@ -65,7 +65,7 @@ let rec string_of_expr = function
   | Fliteral(l) -> string_of_float l
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
-  | MathId(s) -> s
+  | Id(s) -> s
   | Binop(e1, o, e2) ->
       string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
   | Unop(o, e) -> string_of_uop o ^ string_of_expr e
