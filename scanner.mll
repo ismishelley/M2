@@ -49,12 +49,12 @@ rule token = parse
 | "true"   { TRUE }
 | "false"  { FALSE }
 | "void"   { VOID }
-| "String" { STRING }
-| "Matrix" { MATRIX }
+| "string" { STRING }
+(* | "Matrix" { MATRIX } *)
 
 (* Other Reserved Words *)
-| "new"    { NEW }
-| "struct" { STRUCT }
+(*| "new"    { NEW }
+| "struct" { STRUCT } *)
 
 (* Literals *)
 | ['0'-'9']+ as lxm { LITERAL(int_of_string lxm) }
