@@ -94,7 +94,7 @@ expr:
     LITERAL          { Literal($1) }
   | FLOAT_LITERAL    { FloatLit ($1) }
   | CHAR_LITERAL     { CharLit ($1)  }
-  | STRING_LITERAL.  { StringLit ($1) }
+  | STRING_LITERAL  { StringLit ($1) }
   | TRUE             { BoolLit(true) }
   | FALSE            { BoolLit(false) }
   | ID               { Id($1) }
