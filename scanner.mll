@@ -41,26 +41,25 @@ rule token = parse
 | "break"  { BREAK }
 | "continue" { CONTINUE }
 
-(* Primitive Data Types *)
+(* Data Types *)
 | "int"    { INT }
 | "float"  { FLOAT }
 | "char"   { CHAR }
 | "bool"   { BOOL }
+| "true"   { TRUE }
+| "false"  { FALSE }
 | "void"   { VOID }
-
-(* Support Data Types *)
-| "string" { STRING }
+| "String" { STRING }
 | "Matrix" { MATRIX }
 
 (* Other Reserved Words *)
-| "true"   { TRUE }
-| "false"  { FALSE }
 | "new"    { NEW }
 | "struct" { STRUCT }
 
 (* Literals *)
-| ['0'-'9']+ as lxm { INT_LITERAL(int_of_string lxm) }
+| ['0'-'9']+ as lxm { LITERAL(int_of_string lxm) }
 | ['0'-'9']+ '.' ['0'-'9']+ as lxm { FLOAT_LITERAL(float_of_string lxm) }
+| '"' ([^'"']|"\\\"")* '"' as lxm { STRING_LITERAL(lxm) }
 | ['a-z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
 | eof { EOF }
 | _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
