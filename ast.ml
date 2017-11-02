@@ -5,14 +5,17 @@ type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
 
 type uop = Neg | Not
 
-type typ = Int | Float | Char | String | Matrix | Bool | Void
+(* type typ = Int | Float | Char | String | Matrix | Bool | Void *)
+type typ = Int | Float | Char | String | Bool | Void
 
 type bind = typ * string
 
 type expr =
     Literal of int
-  | MLiteral of matrix
-  | Fliteral of float
+  | FloatLit of float
+  | CharLit of char
+  | StringLit of string
+(*  | MatrixLit of matrix *)
   | BoolLit of bool
   | Id of string
   | Binop of expr * op * expr
@@ -61,8 +64,10 @@ let string_of_uop = function
 
 let rec string_of_expr = function
     Literal(l) -> string_of_int l
-  | MLiteral(l) -> string_of_matrix l
-  | Fliteral(l) -> string_of_float l
+  | FloatLit(l) -> string_of_float l
+  | CharLit(l) -> string_of_char l
+  | StringLit(l) -> l
+ (* | MatrixLit(l) -> string_of_matrix l (* there is no string_of_matrix function in Ocaml *)*)
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
   | Id(s) -> s
@@ -92,7 +97,7 @@ let string_of_typ = function
   | Float -> "float"
   | Char -> "char"
   | String -> "string"
-  | Matrix -> "Matrix"
+ (* | Matrix -> "Matrix" *)
   | Bool -> "bool"
   | Void -> "void"
 
