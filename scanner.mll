@@ -3,9 +3,14 @@
 { open Parser }
 
 rule token = parse
-  [' ' '\t' '\r' '\n'] { token lexbuf } (* Whitespace *)
-| "/*"     { commentB lexbuf }			(* Comments *)
-| "//"     { commentS lexbuf }
+(* Whitespace *)
+[' ' '\t' '\r' '\n'] { token lexbuf } 
+  
+(* Comments *)
+| "/*"     { blockComment lexbuf }			
+| "//"     { singleComment lexbuf }
+
+(* Operators and Separators *)
 | '('      { LPAREN }
 | ')'      { RPAREN }
 | '{'      { LBRACE }
@@ -26,35 +31,44 @@ rule token = parse
 | "&&"     { AND }
 | "||"     { OR }
 | "!"      { NOT }
+
+(* Control Flow *)
 | "if"     { IF }
 | "else"   { ELSE }
 | "for"    { FOR }
 | "while"  { WHILE }
 | "return" { RETURN }
-| "default"{ DEFAULT }
 | "break"  { BREAK }
 | "continue" { CONTINUE }
+
+(* Primitive Data Types *)
 | "int"    { INT }
 | "float"  { FLOAT }
 | "char"   { CHAR }
-| "string" { STRING }
-| "Matrix" { MATRIX }
 | "bool"   { BOOL }
 | "void"   { VOID }
+
+(* Support Data Types *)
+| "string" { STRING }
+| "Matrix" { MATRIX }
+
+(* Other Reserved Words *)
 | "true"   { TRUE }
 | "false"  { FALSE }
 | "new"    { NEW }
 | "struct" { STRUCT }
-| ['0'-'9']+ as lxm { LITERAL(int_of_string lxm) }
-| ['0'-'9']* '.' ['0'-'9']+ as lxm { FLOAT_LITERAL(float_of_string lxm) }
+
+(* Literals *)
+| ['0'-'9']+ as lxm { INT_LITERAL(int_of_string lxm) }
+| ['0'-'9']+ '.' ['0'-'9']+ as lxm { FLOAT_LITERAL(float_of_string lxm) }
 | ['a-z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
 | eof { EOF }
 | _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
-and commentB = parse
+and blockComment = parse
   "*/" { token lexbuf }
-| _    { commentB lexbuf }
+| _    { blockComment lexbuf }
 
-and commentS = parse
-  ['\n' '\r'] { token lexbuf} /* In Mac OS \r also means new line*/
-| _    { commentS lexbuf }
+and singleComment = parse
+  ['\n' '\r'] { token lexbuf}
+| _    { singleComment lexbuf }
