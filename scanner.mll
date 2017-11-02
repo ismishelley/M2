@@ -44,7 +44,6 @@ rule token = parse
 | "true"   { TRUE }
 | "false"  { FALSE }
 | "new"    { NEW }
-| "main"   { MAIN }
 | "struct" { STRUCT }
 | ['0'-'9']+ as lxm { LITERAL(int_of_string lxm) }
 | ['0'-'9']* '.' ['0'-'9']+ as lxm { FLOAT_LITERAL(float_of_string lxm) }
