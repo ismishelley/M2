@@ -8,11 +8,13 @@ open Ast
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token RETURN IF ELSE FOR WHILE SWITCH BREAK CONTINUE
-%token INT FLOAT DOUBLE CHAR STRING MATRIX BOOL VOID
-%token NEW MAIN STRUCT
+%token INT FLOAT CHAR STRING BOOL VOID
+(* %token NEW MAIN STRUCT *)
 %token <int> LITERAL
 %token <float> FLOAT_LITERAL
-%token <string> DATAID
+%token <char> CHAR_LITERAL
+%token <string> STRING_LITERAL
+%token <string> ID
 %token EOF
 
 %nonassoc NOELSE
@@ -40,7 +42,7 @@ decls:
  | decls fdecl { fst $1, ($2 :: snd $1) }
 
 fdecl:
-   typ DATAID LPAREN formals_opt RPAREN LBRACE vdecl_list stmt_list RBRACE
+   typ ID LPAREN formals_opt RPAREN LBRACE vdecl_list stmt_list RBRACE
      { { typ = $1;
 	 fname = $2;
 	 formals = $4;
@@ -52,24 +54,24 @@ formals_opt:
   | formal_list   { List.rev $1 }
 
 formal_list:
-    typ DATAID                   { [($1,$2)] }
-  | formal_list COMMA typ DATAID { ($3,$4) :: $1 }
+    typ ID                   { [($1,$2)] }
+  | formal_list COMMA typ ID { ($3,$4) :: $1 }
 
 typ:
-    INT { Int }
-  | FLOAT {Float}
-  | CHAR {Char}
-  | STRING {String}
-  | MATRIX {Matrix}
-  | BOOL { Bool }
-  | VOID { Void }
+    INT    { Int }
+  | FLOAT  { Float }
+  | CHAR   { Char }
+  | STRING { String }
+(*  | MATRIX {Matrix} *)
+  | BOOL   { Bool }
+  | VOID   { Void }
 
 vdecl_list:
     /* nothing */    { [] }
   | vdecl_list vdecl { $2 :: $1 }
 
 vdecl:
-   typ DATAID SEMI { ($1, $2) }
+   typ ID SEMI { ($1, $2) }
 
 stmt_list:
     /* nothing */  { [] }
@@ -89,15 +91,17 @@ stmt:
 expr_opt:
     /* nothing */ { Noexpr }
   | expr          { $1 }
-  | matrix        { $1 }
+  (* | matrix        { $1 } *)
 
 expr:
     LITERAL          { Literal($1) }
-  | matrix.       { $1 }
-  | FLOAT_LITERAL    { Fliteral($1) }
+ (* | matrix.       { $1 } *)
+  | FLOAT_LITERAL    { FloatLit ($1) }
+  | CHAR_LITERAL     { CharLit ($1)  }
+  | STRING_LITERAL.  { StringLit ($1) }
   | TRUE             { BoolLit(true) }
   | FALSE            { BoolLit(false) }
-  | DATAID           { DataId($1) }
+  | ID               { Id($1) }
   | expr PLUS   expr { Binop($1, Add,   $3) }
   | expr MINUS  expr { Binop($1, Sub,   $3) }
   | expr TIMES  expr { Binop($1, Mult,  $3) }
@@ -112,13 +116,11 @@ expr:
   | expr OR     expr { Binop($1, Or,    $3) }
   | MINUS expr %prec NEG { Unop(Neg, $2) }
   | NOT expr         { Unop(Not, $2) }
-  | DATAID ASSIGN expr   { Assign($1, $3) }
-  | DATAID LPAREN actuals_opt RPAREN { Call($1, $3) }
-  (* Do we use different assignment rules for MATHID? *)
+  | ID ASSIGN expr   { Assign($1, $3) }
+  | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
   | LPAREN expr RPAREN { $2 }
   
-matrix:
-
+(* matrix: *)
 
 actuals_opt:
     /* nothing */ { [] }
