@@ -15,7 +15,6 @@ type expr =
   | FloatLit of float
   | CharLit of char
   | StringLit of string
-(*  | MatrixLit of matrix *)
   | BoolLit of bool
   | Id of string
   | Binop of expr * op * expr
@@ -65,9 +64,8 @@ let string_of_uop = function
 let rec string_of_expr = function
     Literal(l) -> string_of_int l
   | FloatLit(l) -> string_of_float l
-  | CharLit(l) -> string_of_char l
+  | CharLit(l) -> String.make 1 l
   | StringLit(l) -> l
- (* | MatrixLit(l) -> string_of_matrix l (* there is no string_of_matrix function in Ocaml *)*)
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
   | Id(s) -> s
@@ -97,7 +95,6 @@ let string_of_typ = function
   | Float -> "float"
   | Char -> "char"
   | String -> "string"
- (* | Matrix -> "Matrix" *)
   | Bool -> "bool"
   | Void -> "void"
 

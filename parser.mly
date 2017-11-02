@@ -9,7 +9,6 @@ open Ast
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token RETURN IF ELSE FOR WHILE SWITCH BREAK CONTINUE
 %token INT FLOAT CHAR STRING BOOL VOID
-(* %token NEW MAIN STRUCT *)
 %token <int> LITERAL
 %token <float> FLOAT_LITERAL
 %token <char> CHAR_LITERAL
@@ -62,7 +61,6 @@ typ:
   | FLOAT  { Float }
   | CHAR   { Char }
   | STRING { String }
-(*  | MATRIX {Matrix} *)
   | BOOL   { Bool }
   | VOID   { Void }
 
@@ -91,11 +89,9 @@ stmt:
 expr_opt:
     /* nothing */ { Noexpr }
   | expr          { $1 }
-  (* | matrix        { $1 } *)
 
 expr:
     LITERAL          { Literal($1) }
- (* | matrix.       { $1 } *)
   | FLOAT_LITERAL    { FloatLit ($1) }
   | CHAR_LITERAL     { CharLit ($1)  }
   | STRING_LITERAL.  { StringLit ($1) }
@@ -120,8 +116,6 @@ expr:
   | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
   | LPAREN expr RPAREN { $2 }
   
-(* matrix: *)
-
 actuals_opt:
     /* nothing */ { [] }
   | actuals_list  { List.rev $1 }
