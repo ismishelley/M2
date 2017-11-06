@@ -4,7 +4,6 @@
 let unescape s =
     	Scanf.sscanf ("\"" ^ s ^ "\"") "%S%!" (fun x -> x)}
 
-let escape = '\\' ['"']
 let ascii = ([' '-'!' '#'-'[' ']'-'~'])
 let esc = '\\' ['\\' ''' '"' 'n' 'r' 't']
 let str = '"' ( (ascii | esc)* as lxm ) '"'
