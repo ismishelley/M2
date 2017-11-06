@@ -120,9 +120,15 @@ let translate (globals, functions) =
       | A.Not     -> L.build_not) e' "tmp" builder
       | A.Assign (s, e) -> let e' = expr builder e in
 	                   ignore (L.build_store e' (lookup s) builder); e'
-      | A.Call ("print", [e]) | A.Call ("printb", [e]) | A.Call ("printstr", [e]) ->
+      | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
 	  L.build_call printf_func [| int_format_str ; (expr builder e) |]
 	    "printf" builder
+      | A.Call ("printstr", [e]) -> 
+    let get_string = function A.StringLit s -> s | _ -> "" in
+    (*we need to understand the two line below*)
+    let s_ptr = L.build_global_stringptr ((get_string e)) ".str" builder in
+    L.build_call printf_func [| s_ptr |] 
+      "printf" builder
       | A.Call ("printbig", [e]) ->
 	  L.build_call printbig_func [| (expr builder e) |] "printbig" builder
       | A.Call (f, act) ->
