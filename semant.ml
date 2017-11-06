@@ -52,9 +52,11 @@ let check (globals, functions) =
      { typ = Void; fname = "print"; formals = [(Int, "x")];
        locals = []; body = [] } (StringMap.add "printb"
      { typ = Void; fname = "printb"; formals = [(Bool, "x")];
-       locals = []; body = [] } (StringMap.singleton "printbig"
+       locals = []; body = [] } (StringMap.add "printstr"
+   	 { typ = Void; fname = "printstr"; formals = [(String, "x")];
+   	   locals = []; body = [] } (StringMap.singleton "printbig"
      { typ = Void; fname = "printbig"; formals = [(Int, "x")];
-       locals = []; body = [] }))
+       locals = []; body = [] })))
    in
      
   let function_decls = List.fold_left (fun m fd -> StringMap.add fd.fname fd m)
@@ -93,7 +95,7 @@ let check (globals, functions) =
 
     (* Return the type of an expression or throw an exception *)
     let rec expr = function
-	     Literal _ -> Int
+	    Literal _ -> Int
       | FloatLit _ -> Float
       | CharLit _ -> Char
       | StringLit _ -> String
