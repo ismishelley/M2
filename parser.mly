@@ -4,7 +4,7 @@
 open Ast
 %}
 
-%token SEMI LPAREN RPAREN LBRACE RBRACE COMMA
+%token SEMI LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE COMMA
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token RETURN IF ELSE FOR WHILE SWITCH BREAK CONTINUE
@@ -115,7 +115,16 @@ expr:
   | ID ASSIGN expr   { Assign($1, $3) }
   | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
   | LPAREN expr RPAREN { $2 }
-  
+  | LBRACKET mat_lit RBRACKET { MatrixLit ($2) }
+ 
+mat_lit:
+ mat_lit COMMA row
+ |row
+
+row:
+ row COMMA expr
+ |expr
+ 
 actuals_opt:
     /* nothing */ { [] }
   | actuals_list  { List.rev $1 }
