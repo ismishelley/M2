@@ -1,21 +1,20 @@
-(* Abstract Syntax Tree and functions for printing it *)
-
 type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
           And | Or
 
 type uop = Neg | Not
 
-(* type typ = Int | Float | Char | String | Matrix | Bool | Void *)
-type typ = Int | Float | Char | String | Bool | Void
+type num = IntLit of int | FloatLit of float
+
+type typ = Int | Float | String | Bool | Void
+  | Matrix of typ * num * num 
 
 type bind = typ * string
 
 type expr =
-    Literal of int
-  | FloatLit of float
-  | CharLit of char
+   NumLit of num
   | StringLit of string
   | BoolLit of bool
+  | MatrixLit of int list list
   | Id of string
   | Binop of expr * op * expr
   | Unop of uop * expr
@@ -43,7 +42,7 @@ type program = bind list * func_decl list
 
 (* Pretty-printing functions *)
 
-let string_of_op = function
+(* let string_of_op = function
     Add -> "+"
   | Sub -> "-"
   | Mult -> "*"
@@ -62,12 +61,14 @@ let string_of_uop = function
   | Not -> "!"
 
 let rec string_of_expr = function
-    Literal(l) -> string_of_int l
-  | FloatLit(l) -> string_of_float l
+  NumLit(l) -> string_of_int l
+    (* Literal(l) -> string_of_int l
+  | FloatLit(l) -> string_of_float l *)
   | CharLit(l) -> String.make 1 l
   | StringLit(l) -> l
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
+  | MatrixLit(l1 l2) -> String.concat ", " (List.map string_of_int l1) ^ String.concat ", " (List.map string_of_int l2)
   | Id(s) -> s
   | Binop(e1, o, e2) ->
       string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
@@ -97,6 +98,7 @@ let string_of_typ = function
   | String -> "string"
   | Bool -> "bool"
   | Void -> "void"
+  | Matrix -> "matrix"
 
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 
@@ -110,4 +112,4 @@ let string_of_fdecl fdecl =
 
 let string_of_program (vars, funcs) =
   String.concat "" (List.map string_of_vdecl vars) ^ "\n" ^
-  String.concat "\n" (List.map string_of_fdecl funcs)
+  String.concat "\n" (List.map string_of_fdecl funcs) *)
