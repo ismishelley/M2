@@ -1,9 +1,9 @@
-(* Ocamllex scanner for MicroC *)
-
 { open Parser 
-let unescape s =
-    	Scanf.sscanf ("\"" ^ s ^ "\"") "%S%!" (fun x -> x)}
+  let unescape s =
+    	Scanf.sscanf ("\"" ^ s ^ "\"") "%S%!" (fun x -> x)
+ }
 
+let escape = '\\' ['"']
 let ascii = ([' '-'!' '#'-'[' ']'-'~'])
 let esc = '\\' ['\\' ''' '"' 'n' 'r' 't']
 let str = '"' ( (ascii | esc)* as lxm ) '"'
@@ -19,6 +19,8 @@ rule token = parse
 (* Operators and Separators *)
 | '('      { LPAREN }
 | ')'      { RPAREN }
+| '['      { LBRACKET }
+| ']'      { RBRACKET }
 | '{'      { LBRACE }
 | '}'      { RBRACE }
 | ';'      { SEMI }
@@ -50,27 +52,22 @@ rule token = parse
 (* Data Types *)
 | "int"    { INT }
 | "float"  { FLOAT }
-| "char"   { CHAR }
 | "bool"   { BOOL }
-| "true"   { TRUE }
-| "false"  { FALSE }
 | "void"   { VOID }
 | "string" { STRING }
-(* | "Matrix" { MATRIX } *)
+| "matrix" { MATRIX }
 
-(* Other Reserved Words *)
-(*| "new"    { NEW }
-| "struct" { STRUCT } *)
+(* Boolean Values *)
+| "true"   { TRUE }
+| "false"  { FALSE }
 
-(* Literals *)
-| ['0'-'9']+ as lxm { LITERAL(int_of_string lxm) }
-| ['0'-'9']+ '.' ['0'-'9']+ as lxm { FLOAT_LITERAL(float_of_string lxm) }
+(* Literals, Identifier, EOF *)
+| ['0'-'9']+ as lxm { NUM_LITERAL(Ast.IntLit (int_of_string lxm)) }
+| ['0'-'9']+ '.' ['0'-'9']+ as lxm { NUM_LITERAL(Ast.FloatLit(float_of_string lxm) }
 | str { STRING_LITERAL (unescape lxm) }
-| '"' ([^'"']|escape)* '"' as lxm { STRING_LITERAL(unescape(lxm)) }
 | ['a'-'z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
 | eof { EOF }
 | _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
-
 
 and blockComment = parse
   "*/" { token lexbuf }
