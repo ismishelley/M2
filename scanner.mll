@@ -62,8 +62,8 @@ rule token = parse
 | "false"  { FALSE }
 
 (* Literals, Identifier, EOF *)
-| ['0'-'9']+ as lxm { NUM_LITERAL(Ast.IntLit (int_of_string lxm)) }
-| ['0'-'9']+ '.' ['0'-'9']+ as lxm { NUM_LITERAL(Ast.FloatLit(float_of_string lxm) }
+| ['0'-'9']+ as lxm { INT_LITERAL (int_of_string lxm) }
+| ['0'-'9']+ '.' ['0'-'9']+ as lxm { FLOAT_LITERAL (float_of_string lxm) }
 | str { STRING_LITERAL (unescape lxm) }
 | ['a'-'z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
 | eof { EOF }
