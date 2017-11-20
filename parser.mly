@@ -1,15 +1,17 @@
 /* Ocamlyacc parser for M2 */
 
-%{ open Ast %}
+%{
+open Ast
+%}
 
 %token SEMI LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE COMMA
 %token PLUS MINUS TIMES DIVIDE ASSIGN NOT
 %token EQ NEQ LT LEQ GT GEQ TRUE FALSE AND OR
 %token RETURN IF ELSE FOR WHILE SWITCH BREAK CONTINUE
-%token INT FLOAT STRING BOOL VOID MATRIX
-
-%token <int> INT_LITERAL
+%token INT FLOAT CHAR STRING BOOL VOID MATRIX
+%token <int> LITERAL
 %token <float> FLOAT_LITERAL
+%token <char> CHAR_LITERAL
 %token <string> STRING_LITERAL
 %token <string> ID
 %token EOF
@@ -34,7 +36,7 @@ program:
   decls EOF { $1 }
 
 decls:
-  /* nothing */ { [], [] }
+   /* nothing */ { [], [] }
  | decls vdecl { ($2 :: fst $1), snd $1 }
  | decls fdecl { fst $1, ($2 :: snd $1) }
 
@@ -47,34 +49,35 @@ fdecl:
 	 body = List.rev $8 } }
 
 formals_opt:
-  /* nothing */ { [] }
+    /* nothing */ { [] }
   | formal_list   { List.rev $1 }
 
 formal_list:
-  typ ID                   { [($1,$2)] }
+    typ ID                   { [($1,$2)] }
   | formal_list COMMA typ ID { ($3,$4) :: $1 }
 
 typ:
-  INT                                                          { Int }
-  | FLOAT                                                      { Float }
-  | STRING                                                     { String }
-  | BOOL                                                       { Bool }
-  | VOID                                                       { Void }
-  | MATRIX typ LBRACKET INT_LITERAL RBRACKET LBRACKET INT_LITERAL RBRACKET { Matrix ($2, $4, $7) }
+    INT    { Int }
+  | FLOAT  { Float }
+  | CHAR   { Char }
+  | STRING { String }
+  | BOOL   { Bool }
+  | VOID   { Void }
+  | MATRIX typ LBRACKET LITERAL RBRACKET LBRACKET LITERAL RBRACKET   { Matrix($2, $4, $7) }
 
 vdecl_list:
-  /* nothing */    { [] }
+    /* nothing */    { [] }
   | vdecl_list vdecl { $2 :: $1 }
 
 vdecl:
-  typ ID SEMI { ($1, $2) }
+   typ ID SEMI { ($1, $2) }
 
 stmt_list:
-  /* nothing */  { [] }
+    /* nothing */  { [] }
   | stmt_list stmt { $2 :: $1 }
 
 stmt:
-  expr SEMI { Expr $1 }
+    expr SEMI { Expr $1 }
   | RETURN SEMI { Return Noexpr }
   | RETURN expr SEMI { Return $2 }
   | LBRACE stmt_list RBRACE { Block(List.rev $2) }
@@ -85,13 +88,14 @@ stmt:
   | WHILE LPAREN expr RPAREN stmt { While($3, $5) }
 
 expr_opt:
-  /* nothing */ { Noexpr }
+    /* nothing */ { Noexpr }
   | expr          { $1 }
 
 expr:
-    INT_LITERAL      { IntLit($1) }
+    LITERAL          { Literal($1) }
   | FLOAT_LITERAL    { FloatLit ($1) }
-  | STRING_LITERAL   { StringLit ($1) }
+  | CHAR_LITERAL     { CharLit ($1)  }
+  | STRING_LITERAL  { StringLit ($1) }
   | TRUE             { BoolLit(true) }
   | FALSE            { BoolLit(false) }
   | ID               { Id($1) }
@@ -112,8 +116,23 @@ expr:
   | ID ASSIGN expr   { Assign($1, $3) }
   | ID LPAREN actuals_opt RPAREN { Call($1, $3) }
   | LPAREN expr RPAREN { $2 }
-  | LBRACKET mat_lit RBRACKET { MatrixLit($2) }
+  | LBRACKET mat_lit RBRACKET { MatrixLit ($2) }
 
+
+mat_lit:
+  row  { [$1] }
+ |mat_lit COMMA row  { $3 :: $1 }
+ 
+
+row:
+  lit   { $1 }
+ |row COMMA lit    { $3 :: $1 }
+
+ lit:
+ LITERAL {$1}
+
+ 
+ 
 actuals_opt:
     /* nothing */ { [] }
   | actuals_list  { List.rev $1 }
@@ -121,16 +140,3 @@ actuals_opt:
 actuals_list:
     expr                    { [$1] }
   | actuals_list COMMA expr { $3 :: $1 }
-
-lit:
-  INT_LITERAL      { IntLit($1) }
-  |FLOAT_LITERAL   { FloatLit ($1) }
-
-mat_lit:
-  LBRACKET lit_list RBRACKET                 { [$2] }
-  | mat_lit SEMI LBRACKET lit_list RBRACKET  { $4::$1 }
-
-lit_list:
-  lit                   { [$1] }
-  | lit_list COMMA lit  { $3::$1 }
-

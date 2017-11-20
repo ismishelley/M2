@@ -1,24 +1,30 @@
+(* Abstract Syntax Tree and functions for printing it *)
+
 type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq |
           And | Or
 
 type uop = Neg | Not
 
-type typ = Int | Float | String | Bool | Void | Matrix of typ * int * int
+(* type typ = Int | Float | Char | String | Matrix | Bool | Void *)
+type typ = Int | Float | Char | String | Bool | Void | Matrix of typ * int * int
 
 type bind = typ * string
 
+
+
 type expr =
-   IntLit of int
+    Literal of int
   | FloatLit of float
+  | CharLit of char
   | StringLit of string
   | BoolLit of bool
-  | MatrixLit of expr list list
   | Id of string
   | Binop of expr * op * expr
   | Unop of uop * expr
   | Assign of string * expr
   | Call of string * expr list
   | Noexpr
+  | MatrixLit of typ list list
 
 type stmt =
     Block of stmt list
@@ -59,12 +65,12 @@ let string_of_uop = function
   | Not -> "!"
 
 let rec string_of_expr = function
-  IntLit(l) -> string_of_int l
+    Literal(l) -> string_of_int l
   | FloatLit(l) -> string_of_float l
+  | CharLit(l) -> String.make 1 l
   | StringLit(l) -> l
   | BoolLit(true) -> "true"
   | BoolLit(false) -> "false"
-  | MatrixLit(el) -> "matrix lit"
   | Id(s) -> s
   | Binop(e1, o, e2) ->
       string_of_expr e1 ^ " " ^ string_of_op o ^ " " ^ string_of_expr e2
@@ -87,14 +93,13 @@ let rec string_of_stmt = function
       string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
 
-let rec string_of_typ = function
+let string_of_typ = function
     Int -> "int"
   | Float -> "float"
+  | Char -> "char"
   | String -> "string"
   | Bool -> "bool"
   | Void -> "void"
-  | Matrix(t,d1,d2) -> "matrix<" ^ string_of_typ t ^ "> (" ^
-   string_of_int d1 ^ ", " ^ string_of_int d2 ^ ")"
 
 let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 

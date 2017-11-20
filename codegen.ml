@@ -23,15 +23,27 @@ let translate (globals, functions) =
   and i32_t  = L.i32_type  context
   and i8_t   = L.i8_type   context
   and i1_t   = L.i1_type   context
+  and float_t = L.double_type context
+  and array_t = L.array_type
+  and pointer_t = L.pointer_type
   and void_t = L.void_type context in
 
   let ltype_of_typ = function
       A.Int -> i32_t
-    | A.Float -> i32_t
+    | A.Float -> float_t
     | A.Char -> i8_t
-    | A.String -> i8_t
+    | A.String -> pointer_t i8_t
     | A.Bool -> i1_t
-    | A.Void -> void_t in
+    | A.Void -> void_t 
+    | A.Matrix(typ, rows, cols) ->
+		(match typ with
+			A.Int -> array_t (array_t i32_t cols) rows
+			| A.Float -> array_t (array_t float_t cols) rows
+			| A.Char -> array_t (array_t i8_t cols) rows
+			| _ -> raise(Failure ("wrong type ")))
+
+
+  in
 
   (* Declare each global variable; remember its value in a map *)
   let global_vars =
@@ -64,7 +76,6 @@ let translate (globals, functions) =
     let builder = L.builder_at_end context (L.entry_block the_function) in
 
     let int_format_str = L.build_global_stringptr "%d\n" "fmt" builder in
-    let str_format_str = L.build_global_stringptr "%s\n" "fmt" builder in
     
     (* Construct the function's "locals": formal arguments and locally
        declared variables.  Allocate each on the stack, initialize their
@@ -89,13 +100,46 @@ let translate (globals, functions) =
     in
 
     (* Construct code for an expression; return its value *)
+     let typ_of_lit n = match n with
+      A.Literal(n) -> A.Int
+    | A.FloatLit(n) -> A.Float
+    | A.CharLit (n) -> A.Char
+    | A.StringLit(n)  -> A.String
+    | A.BoolLit(n) -> A.Bool
+    in
     let rec expr builder = function
 	     A.Literal i -> L.const_int i32_t i
       | A.FloatLit f -> L.const_float i32_t f
       | A.CharLit c -> L.const_int i8_t (Char.code c)
-      (* | A.StringLit s -> L.const_string context s *)
-      | A.StringLit s -> L.build_global_stringptr s "tmp" builder
+      | A.StringLit s -> L.const_string context s
       | A.BoolLit b -> L.const_int i1_t (if b then 1 else 0)
+    (*  | A.MatrixLit sll ->
+      let first = List.hd (List.hd sll) in
+        let first_typ = A.Literal(first) in
+                (match first_typ with
+                    A.Float ->
+                        let realOrder       = List.map List.rev sll in
+                        let i64Lists        = List.map (List.map (expr builder)) realOrder in
+                        let listOfArrays    = List.map Array.of_list i64Lists in
+                        let i64ListOfArrays = List.rev (List.map (L.const_array float_t) listOfArrays) in
+                        let arrayOfArrays   = Array.of_list i64ListOfArrays in
+                            L.const_array (array_t float_t (List.length (List.hd sll))) arrayOfArrays
+                    | A.Literal  ->
+                        let realOrder       = List.map List.rev sll in
+                        let i32Lists        = List.map (List.map (expr builder)) realOrder in
+                        let listOfArrays    = List.map Array.of_list i32Lists in
+                        let i32ListOfArrays = List.rev (List.map (L.const_array i32_t) listOfArrays) in
+                        let arrayOfArrays   = Array.of_list i32ListOfArrays in
+                            L.const_array (array_t i32_t (List.length (List.hd sll))) arrayOfArrays
+                    | _ -> raise(Exceptions.UnsupportedMatrixType))  *)   
+
+        | A.MatrixLit sll ->
+                        let realOrder       = List.map List.rev sll in
+                        let i32Lists        = List.map (List.map (expr builder)) realOrder in
+                        let listOfArrays    = List.map Array.of_list i32Lists in
+                        let i32ListOfArrays = List.rev (List.map (L.const_array i32_t) listOfArrays) in
+                        let arrayOfArrays   = Array.of_list i32ListOfArrays in
+                            L.const_array (array_t i32_t (List.length (List.hd sll))) arrayOfArrays
       | A.Noexpr -> L.const_int i32_t 0
       | A.Id s -> L.build_load (lookup s) s builder
       | A.Binop (e1, op, e2) ->
@@ -125,9 +169,6 @@ let translate (globals, functions) =
       | A.Call ("print", [e]) | A.Call ("printb", [e]) ->
 	  L.build_call printf_func [| int_format_str ; (expr builder e) |]
 	    "printf" builder
-      |A.Call ("printstr", [e]) -> 
-    L.build_call printf_func [| str_format_str; (expr builder e) |]
-      "printf" builder
       | A.Call ("printbig", [e]) ->
 	  L.build_call printbig_func [| (expr builder e) |] "printbig" builder
       | A.Call (f, act) ->

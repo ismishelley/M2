@@ -52,11 +52,9 @@ let check (globals, functions) =
      { typ = Void; fname = "print"; formals = [(Int, "x")];
        locals = []; body = [] } (StringMap.add "printb"
      { typ = Void; fname = "printb"; formals = [(Bool, "x")];
-       locals = []; body = [] } (StringMap.add "printstr"
-   	 { typ = Void; fname = "printstr"; formals = [(String, "x")];
-   	   locals = []; body = [] } (StringMap.singleton "printbig"
+       locals = []; body = [] } (StringMap.singleton "printbig"
      { typ = Void; fname = "printbig"; formals = [(Int, "x")];
-       locals = []; body = [] })))
+       locals = []; body = [] }))
    in
      
   let function_decls = List.fold_left (fun m fd -> StringMap.add fd.fname fd m)
@@ -92,10 +90,17 @@ let check (globals, functions) =
       try StringMap.find s symbols
       with Not_found -> raise (Failure ("undeclared identifier " ^ s))
     in
+    let typ_of_lit n = match n with
+      Literal(n) -> Int
+    | FloatLit(n) -> Float
+    | CharLit (n) -> Char
+    | StringLit(n)  -> String
+    | BoolLit(n) -> Bool
+    in
 
     (* Return the type of an expression or throw an exception *)
     let rec expr = function
-	    Literal _ -> Int
+	     Literal _ -> Int
       | FloatLit _ -> Float
       | CharLit _ -> Char
       | StringLit _ -> String
@@ -125,6 +130,17 @@ let check (globals, functions) =
         check_assign lt rt (Failure ("illegal assignment " ^ string_of_typ lt ^
 				     " = " ^ string_of_typ rt ^ " in " ^ 
 				     string_of_expr ex))
+      | Matrix mll ->
+        let first = List.hd (List.hd mll) in
+        let first_size = List.length (List.hd mll) in
+          ignore(List.iter (fun ml -> if (List.length ml = first_size) then () else raise(Exceptions.MatrixDimensionInconsistence)) mll);
+        let first_typ = typ_of_lit first in
+          ignore(List.iter (fun ml -> List.iter (fun n ->
+            (let typ = typ_of_lit n in
+              if (typ = first_typ)
+                then ()
+                else raise(Exceptions.MatrixTypeInconsistence))) ml) mll)
+
       | Call(fname, actuals) as call -> let fd = function_decl fname in
          if List.length actuals != List.length fd.formals then
            raise (Failure ("expecting " ^ string_of_int
@@ -166,3 +182,5 @@ let check (globals, functions) =
    
   in
   List.iter check_function functions
+
+
