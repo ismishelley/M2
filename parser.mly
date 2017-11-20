@@ -8,7 +8,8 @@
 %token RETURN IF ELSE FOR WHILE SWITCH BREAK CONTINUE
 %token INT FLOAT STRING BOOL VOID MATRIX
 
-%token <Ast.num> NUM_LITERAL
+%token <int> INT_LITERAL
+%token <float> FLOAT_LITERAL
 %token <string> STRING_LITERAL
 %token <string> ID
 %token EOF
@@ -59,7 +60,7 @@ typ:
   | STRING                                                     { String }
   | BOOL                                                       { Bool }
   | VOID                                                       { Void }
-  | MATRIX typ LBRACKET NUM_LITERAL COMMA NUM_LITERAL RBRACKET { Matrix ($2, $4, $6) }
+  | MATRIX typ LBRACKET INT_LITERAL RBRACKET LBRACKET INT_LITERAL RBRACKET { Matrix ($2, $4, $7) }
 
 vdecl_list:
   /* nothing */    { [] }
@@ -88,7 +89,7 @@ expr_opt:
   | expr          { $1 }
 
 expr:
-    NUM_LITERAL          { NumLit($1) }
+    INT_LITERAL      { IntLit($1) }
   | FLOAT_LITERAL    { FloatLit ($1) }
   | STRING_LITERAL   { StringLit ($1) }
   | TRUE             { BoolLit(true) }
@@ -113,17 +114,6 @@ expr:
   | LPAREN expr RPAREN { $2 }
   | LBRACKET mat_lit RBRACKET { MatrixLit($2) }
 
-mat_lit:
-  LBRACKET lit_list RBRACKET
-  | mat_lit SEMI LBRACKET lit_list RBRACKET
-
-lit_list:
-  lit
-  | lit_list COMMA lit
-
-lit:
-  NUM_LITERAL
-
 actuals_opt:
     /* nothing */ { [] }
   | actuals_list  { List.rev $1 }
@@ -131,3 +121,16 @@ actuals_opt:
 actuals_list:
     expr                    { [$1] }
   | actuals_list COMMA expr { $3 :: $1 }
+
+lit:
+  INT_LITERAL      { IntLit($1) }
+  |FLOAT_LITERAL   { FloatLit ($1) }
+
+mat_lit:
+  LBRACKET lit_list RBRACKET                 { [$2] }
+  | mat_lit SEMI LBRACKET lit_list RBRACKET  { $4::$1 }
+
+lit_list:
+  lit                   { [$1] }
+  | lit_list COMMA lit  { $3::$1 }
+
