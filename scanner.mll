@@ -1,78 +1,84 @@
-{ open Parser 
-  let unescape s =
-    	Scanf.sscanf ("\"" ^ s ^ "\"") "%S%!" (fun x -> x)
- }
-
-let escape = '\\' ['"']
-let ascii = ([' '-'!' '#'-'[' ']'-'~'])
-let esc = '\\' ['\\' ''' '"' 'n' 'r' 't']
-let str = '"' ( (ascii | esc)* as lxm ) '"'
+{ open Parser }
 
 rule token = parse
-(* Whitespace *)
-[' ' '\t' '\r' '\n'] { token lexbuf } 
-  
-(* Comments *)
-| "/*"     { blockComment lexbuf }			
-| "//"     { singleComment lexbuf }
+	(* Whitespace *)
+	[' ' '\t' '\r' '\n'] { token lexbuf }
 
-(* Operators and Separators *)
-| '('      { LPAREN }
-| ')'      { RPAREN }
-| '['      { LBRACKET }
-| ']'      { RBRACKET }
-| '{'      { LBRACE }
-| '}'      { RBRACE }
-| ';'      { SEMI }
-| ','      { COMMA }
-| '+'      { PLUS }
-| '-'      { MINUS }
-| '*'      { TIMES }
-| '/'      { DIVIDE }
-| '='      { ASSIGN }
-| "=="     { EQ }
-| "!="     { NEQ }
-| '<'      { LT }
-| "<="     { LEQ }
-| ">"      { GT }
-| ">="     { GEQ }
-| "&&"     { AND }
-| "||"     { OR }
-| "!"      { NOT }
+	(* Comments *)
+	| "/*"     { blockComment lexbuf }			
+	| "//"     { singleComment lexbuf }
 
-(* Control Flow *)
-| "if"     { IF }
-| "else"   { ELSE }
-| "for"    { FOR }
-| "while"  { WHILE }
-| "return" { RETURN }
-| "break"  { BREAK }
-| "continue" { CONTINUE }
+	(* Delimiters *)
+	| '('  { LPAREN }  
+	| ')'  { RPAREN } 
+	| '{'  { LBRACE } 
+	| '}'  { RBRACE }
+	| '['  { LBRACKET } 
+	| ']'  { RBRACKET }
+	| ';'  { SEMI } 
+	| ','  { COMMA } 
+	| ':'  { COLON } 
 
-(* Data Types *)
-| "int"    { INT }
-| "float"  { FLOAT }
-| "bool"   { BOOL }
-| "void"   { VOID }
-| "string" { STRING }
-| "matrix" { MATRIX }
+	(* Arithmetic Operators *)
+	| '+'  { PLUS } 
+	| '-'  { MINUS } 
+	| '*'  { TIMES } 
+	| '/'  { DIVIDE }
+	| '='  { ASSIGN } 
+	| "++" { INC } 
+	| "--" { DEC }
 
-(* Boolean Values *)
-| "true"   { TRUE }
-| "false"  { FALSE }
+	(* Relational Operators *)
+	| "==" { EQ } 
+	| "!=" { NEQ } 
+	| '<'  { LT } 
+	| ">"  { GT }
+	| "<=" { LEQ } 
+	| ">=" { GEQ } 
 
-(* Literals, Identifier, EOF *)
-| ['0'-'9']+ as lxm { INT_LITERAL (int_of_string lxm) }
-| ['0'-'9']+ '.' ['0'-'9']+ as lxm { FLOAT_LITERAL (float_of_string lxm) }
-| str { STRING_LITERAL (unescape lxm) }
-| ['a'-'z' 'A'-'Z' '_']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
-| eof { EOF }
-| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
+	(* Logical Operators *)
+	| "&&" { AND } 
+	| "||" { OR } 
+	| '!'  { NOT }
+
+	(* Control Flow *)
+	| "if"     { IF } 
+	| "else"   { ELSE } 
+	| "while"  { WHILE }
+	| "for"    { FOR } 
+	| "return" { RETURN }
+
+	(* Boolean Values *)
+	| "true"  { TRUE } 
+	| "false" { FALSE }
+
+	(* Data Types *)
+	| "int"    { INT } 
+	| "float"  { FLOAT } 
+	| "bool"   { BOOL } 
+	| "void"   { VOID }
+	| "String" { STRING } 
+	| "matrix" { MATRIX } 
+
+	(* Matrix-related *)
+	| "rows" { ROWS } 
+	| "cols" { COLS } 
+	| "tr"   { TRANSPOSE }
+
+	(* Literals, Identifiers, EOF *)
+	| ['0'-'9']+ as lxm { NUM_LIT(Ast.IntLit(int_of_string lxm)) }
+	| ['0'-'9']* '.' ['0'-'9']+ as lxmd { NUM_LIT(Ast.FloatLit(float_of_string lxmd)) }
+	| '"' (([^ '"'] | "\\\"")* as strlit) '"' { STRING_LIT(strlit) }
+	| ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
+	| "null" { NULL }
+	| eof { EOF }
+	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 
 and blockComment = parse
   "*/" { token lexbuf }
-| _    { blockComment lexbuf }
+	| _    { blockComment lexbuf }
 
 and singleComment = parse
   ['\n' '\r'] { token lexbuf}
-| _    { singleComment lexbuf }
+	| _    { singleComment lexbuf }
+  
