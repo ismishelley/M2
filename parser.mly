@@ -150,8 +150,8 @@ actuals_list:
   | actuals_list COMMA expr         { $3 :: $1 }
 
 mat_lit:
-    lit_list                        { [$1] }
-    | mat_lit SEMI lit_list         { $3 :: $1 }
+    LBRACKET lit_list RBRACKET                       { [$2] }
+    | mat_lit SEMI LBRACKET lit_list RBRACKET        { $4 :: $1 }
 
 lit_list:
     lit                             { [$1] }
