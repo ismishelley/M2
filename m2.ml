@@ -28,6 +28,7 @@ let _ =
     let ast = Parser.program Scanner.token lexbuf in
 
     let sast =
+    (* gst: global symbol table *)
     let gst = Semant.check_var_decls (fst ast) in
         Semant.check_functions gst (fst ast) (snd ast) in
 
