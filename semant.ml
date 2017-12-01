@@ -133,6 +133,7 @@ and check_matrix_lit fname_map func_st mlist =
 					else raise(Exceptions.MatrixLitMustBeOneType))) nl) mlist);
 	SMatrixLit(smlist, first_typ)
 
+(* check if s is the name of a declared function *)
 and function_decl s fname_map =
 	try StringMap.find s fname_map
 	with Not_found -> raise (Exceptions.FunctionNotFound(s))
@@ -158,7 +159,7 @@ and check_transpose s func_st =
 and expr_to_sexpr fname_map func_st = function
 	  NumLit(IntLit(n))  		-> SNumLit(SIntLit(n))
 	| NumLit(FloatLit(n))		-> SNumLit(SFloatLit(n))
-	| BoolLit(b)       		-> SBoolLit(b)
+	| BoolLit(b)       			-> SBoolLit(b)
 	| StringLit(s)        		-> SStringLit(s)
 	| Id(s)                		-> SId(s, get_ID_type s func_st)
 	| Null                 		-> SNull
@@ -224,30 +225,25 @@ let add_reserved_functions =
 	reserved
 
 (* Variable Declaration Checking Functions *)
-let report_duplicate s li =
+(* Raise an exception if the given list has a duplicate *)
+let report_duplicate exceptf list =
 	let rec helper = function
-		n1 :: n2 :: _ when n1 = n2 ->
-			if s = "global" then raise(Exceptions.DuplicateGlobal(n1))
-			else if s = "function" then raise(Exceptions.DuplicateFuncOrLocal(n1))
+		n1 :: n2 :: _ when n1 = n2 -> raise (Failure (exceptf n1))
 		| _ :: t -> helper t
 		| [] -> ()
-	in helper (List.sort compare li)
+	in helper (List.sort compare list)
 
-let check_not_void s var_decl =
-	match var_decl with
-		(Datatype(Void), n) 	->
-			if s = "global" then raise(Exceptions.VoidGlobal(n))
-			else if s = "function" then raise(Exceptions.VoidFunc(n))
-		| _ 					-> ()
+(* Raise an exception if a given binding is to a void type *)
+let check_not_void exceptf = function
+      (Datatype(Void), n) -> raise (Failure (exceptf n))
+    | _ -> ()
 
-let check_not_void_formal form =
-	match form with
-		Formal(Datatype(Void), n) 	-> raise(Exceptions.VoidFunctionFormal(n))
+let check_not_void_formal = function
+		Formal(Datatype(Void), n) 	-> raise(Failure("Void formal"))
 		| _ 					 	-> ()
 
-let check_not_void_local local =
-	match local with
-		Local(Datatype(Void), n) 	-> raise(Exceptions.VoidFunctionLocal(n))
+let check_not_void_local = function
+		Local(Datatype(Void), n) 	-> raise(Failure("Void local"))
 		| _ 						-> ()
 
 let add_to_global_symbol_table globs =
@@ -270,8 +266,9 @@ let get_local_type = function
 	| Local(Datatype(p), n) -> Datatype(p)
 
 let check_var_decls globals =
-	ignore(List.iter (check_not_void "global") globals);
-	ignore(report_duplicate "global" (List.map snd globals));
+	ignore(List.iter (check_not_void (fun n -> "illegal void global " ^ n)) globals);
+	(* check for duplicate global variables *)
+	report_duplicate (fun n -> "duplicate global " ^ n) (List.map snd globals);
 	add_to_global_symbol_table globals;;
 
 (* Function Declaration Checking Functions *)
@@ -305,16 +302,15 @@ let convert_fdecl_to_sfdecl globs fname_map fdecl =
 
 let check_function_return fname fbody returnType =
 	let len = List.length fbody in
-		if len > 0
-			then let final_stmt = List.hd (List.rev fbody) in
+		if len > 0 then let final_stmt = List.hd (List.rev fbody) in
 				match returnType, final_stmt with
-					Datatype(Void), Return(_) -> raise(Exceptions.AllVoidFunctionsMustNotReturn(fname))
+					Datatype(Void), Return(_) -> raise(Failure("Void functions should not return anything"))
 					| Datatype(Void), _ 	  -> ()
 					| _, Return(_)	 	      -> ()
-					| _, _					  -> raise(Exceptions.AllNonVoidFunctionsMustEndWithReturn(fname))
-			else
-				if returnType = Datatype(Void) then ()
-				else raise(Exceptions.AllNonVoidFunctionsMustEndWithReturn(fname))
+					| _, _					  -> raise(Failure("Missing return statement"))
+		else
+			if returnType = Datatype(Void) then ()
+			else raise(Failure("Missing return statement"))
 
 let check_return fname_map fdecl func_st e =
 	let se = expr_to_sexpr fname_map func_st e in
@@ -323,45 +319,41 @@ let check_return fname_map fdecl func_st e =
 			Datatype(Matrix(d,IntLit(0),IntLit(0))) ->
 			 	(match t with
 					Datatype(Matrix(d,_,_)) -> ()
-					| _ -> raise(Exceptions.ReturnTypeMismatch(Utils.string_of_datatype t, Utils.string_of_datatype fdecl.return_type)))
-			| _ -> if (t=fdecl.return_type) then () else raise(Exceptions.ReturnTypeMismatch(Utils.string_of_datatype t, Utils.string_of_datatype fdecl.return_type)))
+					| _ -> raise(Failure "Mismatch return type" ))
+			| _ -> if (t=fdecl.return_type) then () else raise(Failure "Mismatch return type" ))
 
 let rec check_stmt globs fname_map fdecl = function
-	Return(e) 					-> check_return fname_map fdecl (fdecl_to_func_st globs fdecl) e
-	| Block(sl) 				-> check_fbody globs fname_map fdecl sl
-	| If(e, s1, s2) 			-> check_if globs fname_map fdecl s1 s2
-	| While(e, s)				-> check_while globs fname_map fdecl s
-	| For(e1, e2, e3, s)		-> check_for globs fname_map fdecl s
-	| Expr(e)					-> ()
+	Block(sl) 				-> check_fbody globs fname_map fdecl sl
+	| Expr(e)				-> ()
+	| Return(e) 			-> check_return fname_map fdecl (fdecl_to_func_st globs fdecl) e
+	| If(e, s1, s2) 		-> check_stmt globs fname_map fdecl s1; 
+								check_stmt globs fname_map  fdecl s2;
+	| For(e1, e2, e3, s)	-> check_stmt globs fname_map fdecl s
+	| While(e, s)			-> check_stmt globs fname_map fdecl s
 
 and check_fbody globs fname_map fdecl fbody =
-	ignore(List.iter (check_stmt globs fname_map fdecl) fbody);
+	ignore(List.iter (check_stmt globs fname_map fdecl) fbody);;
 
-and check_if globs fname_map fdecl s1 s2 =
-	ignore(check_stmt globs fname_map fdecl s1);
-	ignore(check_stmt globs fname_map fdecl s2);
-
-and check_while globs fname_map fdecl stmt =
-	ignore(check_stmt globs fname_map fdecl stmt);
-
-and check_for globs fname_map fdecl stmt =
-	ignore(check_stmt globs fname_map fdecl stmt);
-
-and check_else globs fname_map fdecl stmt =
-	ignore(check_stmt globs fname_map fdecl stmt);;
-
-let check_function globals fname_map global_st fdecl =
-	ignore(List.iter check_not_void_formal fdecl.formals);
+(* perform various checks on a single function declaration *)
+let check_function globals fname_map global_symtbl fdecl =
+	(* check void for formals *)
+	List.iter check_not_void_formal fdecl.formals;
+	(* check void for locals *)
 	ignore(List.iter check_not_void_local fdecl.locals);
-	ignore(report_duplicate "function" ((List.map get_formal_id fdecl.formals) @ (List.map get_local_id fdecl.locals) @ (List.map get_global_id globals)));
+	(* check for duplicate functions *)
+	report_duplicate (fun n -> "duplicate function " ^ n) ((List.map get_formal_id fdecl.formals) @ (List.map get_local_id fdecl.locals) @ (List.map get_global_id globals));
+	(* check return statement for function *)
 	ignore(check_function_return fdecl.fname fdecl.body fdecl.return_type);
 	ignore(check_fbody globals fname_map fdecl fdecl.body);;
 
-let check_functions global_st globals fdecls =
+(* build sast *)
+let check_functions global_symtbl globals functions =
 	let sast =
-		let fname_map = fdecls_to_fname_map fdecls in
-		ignore(report_duplicate "function" (List.map (fun fd -> fd.fname) fdecls));
-		ignore(List.iter (check_function globals fname_map global_st) fdecls);
-		let sfdecls = List.map (convert_fdecl_to_sfdecl globals fname_map) fdecls in
+		(* Convert function decls to a StringMap of (name,decl) pairs*)
+		let fname_map = fdecls_to_fname_map functions in
+		(* check for duplicate function names *)
+		report_duplicate (fun n -> "duplicate function " ^ n) (List.map (fun fd -> fd.fname) functions);
+		ignore(List.iter (check_function globals fname_map global_symtbl) functions);
+		let sfdecls = List.map (convert_fdecl_to_sfdecl globals fname_map) functions in
 		(globals, sfdecls)
 	in sast
