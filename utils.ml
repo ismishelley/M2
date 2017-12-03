@@ -180,21 +180,18 @@ let rec string_of_sstmt indent =
 
 (* Print Function *)
 
-let string_of_formal = function
-	Formal(d, s) -> (string_of_datatype d) ^ " " ^ s
+let string_of_fl = function
+	(d, s) -> (string_of_datatype d) ^ " " ^ s
 
 let string_of_formal_name = function
-	Formal(_, s) -> s
-
-let string_of_local = function
-	Local(d, s) -> (string_of_datatype d) ^ " " ^ s
+	(_, s) -> s
 
 let string_of_func_decl fdecl =
 	"" ^ (string_of_datatype fdecl.return_type) ^ " " ^ (fdecl.fname) ^ " " ^
 	(* Formals *)
-	"(" ^ String.concat "," (List.map string_of_formal fdecl.formals) ^ ") {\n" ^
+	"(" ^ String.concat "," (List.map string_of_fl fdecl.formals) ^ ") {\n" ^
 	(* Locals *)
-	String.concat "" (List.map string_of_local fdecl.locals) ^
+	String.concat "" (List.map string_of_fl fdecl.locals) ^
 	(* body *)
 	String.concat "" (List.map (string_of_stmt 2) fdecl.body) ^
 	"\t}\n\n"
