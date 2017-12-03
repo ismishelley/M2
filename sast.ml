@@ -35,10 +35,10 @@ type sstmt =
 type sfunc_decl = {
 	sreturn_type 	: datatype;
 	sfname 			: string;
-	sformals 		: formal list;
-	slocals  		: local list;
+	sformals 		: bind list;
+	slocals  		: bind list;
 	sbody 			: sstmt list;
 }
 
 (* All method declarations | Main entry method *)
-type sprogram = var_dec list * func_decl list
+type sprogram = bind list * func_decl list
