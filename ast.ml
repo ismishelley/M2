@@ -11,9 +11,8 @@ type num = IntLit of int | FloatLit of float
 type primitives = Int | Float | Bool | Void	| String | Matrix of primitives * num * num
 type datatype = Datatype of primitives
 
-type formal = Formal of datatype * string
-type local = Local of datatype * string
-type var_dec = datatype * string
+(* Bind *)
+type bind = datatype * string
 
 (* Expressions *)
 type expr =
@@ -46,10 +45,10 @@ type stmt =
 type func_decl = {
 	return_type : datatype;
 	fname 		: string;
-	formals 	: formal list;
-	locals  	: local list;
+	formals 	: bind list;
+	locals  	: bind list;
 	body 		: stmt list;
 }
 
 (* Start Symbol *)
-type program = var_dec list * func_decl list
+type program = bind list * func_decl list
