@@ -54,7 +54,7 @@ program:
 
 decls:
     /* nothing */      { [], [] }
-  | decls gdecl        { ($2 :: fst $1), snd $1 }
+  | decls vdecl        { ($2 :: fst $1), snd $1 }
   | decls fdecl        { fst $1, ($2 :: snd $1) }
 
 fdecl:
@@ -67,8 +67,8 @@ formals_opt:
   | formal_list   { List.rev $1 }
 
 formal_list:
-    datatype ID                   { [Formal($1,$2)] }
-  | formal_list COMMA datatype ID { Formal($3, $4) :: $1 }
+    datatype ID                   { [($1,$2)] }
+  | formal_list COMMA datatype ID { ($3, $4) :: $1 }
 
 datatype:
   primitives { Datatype($1) }
@@ -86,9 +86,6 @@ vdecl_list:
   | vdecl_list vdecl { $2 :: $1 }
 
 vdecl:
-    datatype ID SEMI { Local($1, $2) }
-
-gdecl:
     datatype ID SEMI { ($1, $2) }
 
 stmt_list:
@@ -104,6 +101,10 @@ stmt:
   | IF LPAREN expr RPAREN stmt ELSE stmt                        { If($3, $5, $7) }
   | FOR LPAREN expr_opt SEMI expr SEMI expr_opt RPAREN stmt     { For($3, $5, $7, $9) }
   | WHILE LPAREN expr RPAREN stmt                               { While($3, $5) }
+
+expr_opt:
+    /* nothing */                   { Noexpr }
+  | expr                            { $1 }
 
 expr:
     NUM_LIT                                                     { NumLit($1) }
@@ -137,10 +138,6 @@ expr:
   | ID COLON COLS                                               { Cols($1) }
   | ID COLON TRANSPOSE                                          { Transpose($1) }
 
-expr_opt:
-    /* nothing */                   { Noexpr }
-  | expr                            { $1 }
-
 actuals_opt:
     /* nothing */                   { [] }
   | actuals_list                    { List.rev $1 }
@@ -159,4 +156,3 @@ lit_list:
 
 lit:
     NUM_LIT                         { $1 }
-
