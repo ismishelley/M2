@@ -31,6 +31,8 @@ type expr =
 	| Rows of string
 	| Cols of string
 	| Transpose of string
+	(* | SubMatrix of string * expr * expr * expr * expr *)
+	| Trace of string
 
 (* Statements *)
 type stmt =
