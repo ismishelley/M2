@@ -23,7 +23,7 @@
 %token INT FLOAT BOOL VOID STRING MATRIX
 
 /* Matrix-related */
-%token  ROWS COLS TRANSPOSE
+%token  ROWS COLS TRANSPOSE TRACE
 
 /* Literals, Identifiers, EOF */
 %token <Ast.num> NUM_LIT
@@ -137,6 +137,7 @@ expr:
   | ID COLON ROWS                                               { Rows($1) }
   | ID COLON COLS                                               { Cols($1) }
   | ID COLON TRANSPOSE                                          { Transpose($1) }
+  | ID COLON TRACE                                              { Trace($1) }
 
 actuals_opt:
     /* nothing */                   { [] }
