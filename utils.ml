@@ -68,7 +68,8 @@ and string_of_expr = function
 	| MatrixAccess (s, i, j) 	-> (s) ^ "[" ^ (string_of_expr i) ^ "," ^ (string_of_expr j) ^ "]"
 	| Rows(s)					-> (s) ^ ":rows"
 	| Cols(s)					-> (s) ^ ":cols"
-	| Transpose(s)					-> (s) ^ ":tr"
+	| Transpose(s)				-> (s) ^ ":tr"
+	| Trace(s)                  -> (s) ^ ":trace"
 
 let string_of_snum = function
 		SIntLit(x) -> string_of_int x
@@ -99,6 +100,7 @@ and string_of_sexpr = function
 	| SCols(c)						-> "SCols"
 	| SRows(r)						-> "SRows"
 	| STranspose(s, _)				-> "STranspose"
+	| STrace (s,_)					-> "STrace"
 
 let string_of_local_expr = function
 		Noexpr -> ""
