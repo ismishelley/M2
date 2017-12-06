@@ -64,6 +64,7 @@ rule token = parse
 	| "rows" { ROWS } 
 	| "cols" { COLS } 
 	| "tr"   { TRANSPOSE }
+	| "trace" { TRACE }
 
 	(* Literals, Identifiers, EOF *)
 	| ['0'-'9']+ as lxm { NUM_LIT(Ast.IntLit(int_of_string lxm)) }
