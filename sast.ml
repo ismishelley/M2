@@ -21,6 +21,8 @@ type sexpr =
 	| SRows of int
 	| SCols of int
 	| STranspose of string * datatype
+	(* | SSubMatrix of string * sexpr * sexpr * sexpr * sexpr * datatype *)
+	| STrace of string * datatype
 
 (* Statements *)
 type sstmt =
