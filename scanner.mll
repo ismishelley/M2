@@ -65,6 +65,8 @@ rule token = parse
 	| "cols" { COLS } 
 	| "tr"   { TRANSPOSE }
 	| "trace" { TRACE }
+	| "submatrix" { SUBMATRIX }
+	(*| "mequal" { MEQUAL }*)
 
 	(* Literals, Identifiers, EOF *)
 	| ['0'-'9']+ as lxm { NUM_LIT(Ast.IntLit(int_of_string lxm)) }
