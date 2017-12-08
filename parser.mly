@@ -23,7 +23,8 @@
 %token INT FLOAT BOOL VOID STRING MATRIX
 
 /* Matrix-related */
-%token  ROWS COLS TRANSPOSE TRACE
+/*%token  ROWS COLS TRANSPOSE TRACE SUBMATRIX MEQUAL*/
+%token  ROWS COLS TRANSPOSE TRACE SUBMATRIX
 
 /* Literals, Identifiers, EOF */
 %token <Ast.num> NUM_LIT
@@ -138,6 +139,8 @@ expr:
   | ID COLON COLS                                               { Cols($1) }
   | ID COLON TRANSPOSE                                          { Transpose($1) }
   | ID COLON TRACE                                              { Trace($1) }
+  | ID COLON SUBMATRIX expr expr expr expr                      { SubMatrix($1, $4, $5, $6, $7) }
+  /*| ID COLON MEQUAL ID                                          { Mequal ($1, $4) }*/
 
 actuals_opt:
     /* nothing */                   { [] }
