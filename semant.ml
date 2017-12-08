@@ -3,15 +3,19 @@ open Sast
 
 module StringMap = Map.Make(String)
 
-let get_equality_binop_type type1 type2 se1 se2 op =
+(* let get_equality_binop_type type1 type2 se1 se2 op =
 	if type1 = type2
 	then let t = match type1 with
 		Datatype(String) -> Datatype(String)
 		| Datatype(Int)  -> Datatype(Int)
 		| Datatype(Float) -> Datatype(Float)
 		| Datatype(Matrix(t,r,c)) -> Datatype(Matrix(t,r,c))
+		| _ -> raise (Failure "Equality operator only operates on int, float, String, and matrix")
 	in SBinop(se1, op, se2, t)
-	else raise (Failure "Equality operator only operates on int, float, String, and matrix")
+	else raise (Failure "Equality operator only operates on int, float, String, and matrix") *)
+let get_equality_binop_type type1 type2 se1 se2 op =
+		if type1 = type2 && (type1 = Datatype(String) || type1 = Datatype(Int) || type1 = Datatype(Float)) then SBinop(se1, op, se2, type1)
+		else raise (Exceptions.InvalidBinopExpression("Can only use equality operators with ints and Strings"))
 
 let get_logical_binop_type se1 se2 op = function
 		| (Datatype(Bool), Datatype(Bool)) -> SBinop(se1, op, se2, Datatype(Bool))
@@ -115,9 +119,9 @@ let check_functions (globals, functions) =
 
 	and check_assign fname_map func_st e1 e2 =
 		let se1 = expr_to_sexpr fname_map func_st e1 in
-		let type1 = get_sexpr_type se1 in
+		let type1 = Sast.get_sexpr_type se1 in
 		let se2 = expr_to_sexpr fname_map func_st e2 in
-		let type2 = get_sexpr_type se2 in
+		let type2 = Sast.get_sexpr_type se2 in
 		match type1, type2 with
 			Datatype(String), Datatype(Int)
 			| Datatype(Int), Datatype(String) -> SAssign(se1, se2, type1)
@@ -140,7 +144,7 @@ let check_functions (globals, functions) =
 			| 	_ 		-> raise(Failure"InvalidUnaryOperation")
 		in
 		let se = expr_to_sexpr fname_map func_st e in
-		let t = get_sexpr_type se in
+		let t = Sast.get_sexpr_type se in
 			match t with
 			  Datatype(Int)
 			| Datatype(Float) -> SUnop(op, se, check_num_unop t op)
@@ -150,8 +154,8 @@ let check_functions (globals, functions) =
 	and check_binop fname_map func_st e1 op e2 =
 		let se1 = expr_to_sexpr fname_map func_st e1 in
 		let se2 = expr_to_sexpr fname_map func_st e2 in
-		let type1 = get_sexpr_type se1 in
-		let type2 = get_sexpr_type se2 in
+		let type1 = Sast.get_sexpr_type se1 in
+		let type2 = Sast.get_sexpr_type se2 in
 		match op with
 		Equal | Neq -> get_equality_binop_type type1 type2 se1 se2 op
 		| And | Or -> get_logical_binop_type se1 se2 op (type1, type2)
@@ -212,22 +216,29 @@ let check_functions (globals, functions) =
 				Datatype(Matrix(d, r, c)) -> STranspose(s, Datatype(Matrix(d, c, r)))
 				| _ -> raise(Failure"CannotUseTransposeOnNonMatrix")
 
-	
-
 	and check_trace s func_st =
 		let typ = get_ID_type s func_st in
-			match typ with
-				Datatype(Matrix(d, r, c)) -> STrace(s, Datatype(Matrix(d,r,c)))
+			match typ with 
+			Datatype(Matrix(d, r, c)) -> STrace(s, Datatype(Matrix(d,r,c)))
 				| _ -> raise(Failure"CannotUseTraceOnNonMatrix")
-	(* and check_submatrix s e1 e2 e3 e4 fname_map func_st =
+
+	and check_submatrix s e1 e2 e3 e4 fname_map func_st =
 		let se1 = expr_to_sexpr fname_map func_st e1 in
 		let se2 = expr_to_sexpr fname_map func_st e2 in
 		let se3 = expr_to_sexpr fname_map func_st e3 in
 		let se4 = expr_to_sexpr fname_map func_st e4 in
 		let typ = get_ID_type s func_st in
-			match typ with
-				Datatype(Matrix(d, r, c)) -> SSubMatrix(s, se1, se2, se3, se4, Datatype(Matrix(d,c,r)))
-				| _ -> raise(Failure"CannotUseSubMatrixOnNonMatrix") *)
+			match typ with 
+			Datatype(Matrix(d,r,c)) ->  SSubMatrix(s, se1, se2, se3, se4, Datatype(Matrix(d,r,c)))
+			| _ -> raise(Failure"CannotUseSubMatrixOnNonMatrix")
+
+(* 	and check_mequal s1 s2 func_st =
+		let typ1 = get_ID_type s1 func_st in
+		let typ2 = get_ID_type s2 func_st in
+		if typ1 = typ2 then
+			match typ1 with 
+				Datatype(Matrix(d,r,c)) ->  SMequal(s1, s2, Datatype(Matrix(d,r,c)))
+		else raise(Failure"Mequal only operates for matrices of the same datatype")  *)
 
 	and expr_to_sexpr fname_map func_st = function
 		  NumLit(IntLit(n))  		-> SNumLit(SIntLit(n))
@@ -246,43 +257,14 @@ let check_functions (globals, functions) =
 			else
 			SCall(s, List.map (expr_to_sexpr fname_map func_st) el, fd.return_type)
 		| MatrixAccess(name, dim1, dim2)	-> check_matrix_access fname_map func_st name dim1 dim2
-		| MatrixLit(nll)			-> check_matrix_lit fname_map func_st nll
+		| MatrixLit(mlist)			-> check_matrix_lit fname_map func_st mlist
 		| Rows(s)					-> check_rows s func_st
 		| Cols(s)					-> check_cols s func_st
 		| Transpose(s)				-> check_transpose s func_st
-		(* | SubMatrix (s,e1,e2,e3,e4) -> check_submatrix s e1 e2 e3 e4 fname_map func_st *)
 		| Trace(s)  				-> check_trace s func_st
-
-	and get_sexpr_type sexpr = match sexpr with
-		  SNumLit(SIntLit(_))				-> Datatype(Int)
-		| SNumLit(SFloatLit(_))				-> Datatype(Float)
-		| SBoolLit(_)						-> Datatype(Bool)
-		| SStringLit(_) 					-> Datatype(String)
-		| SNoexpr 							-> Datatype(Void)
-		| SNull								-> Datatype(Void)
-		| SRows(r) 							-> Datatype(Int)
-		| SCols(c) 							-> Datatype(Int)
-		| STranspose(_,d) 					-> d
-		| SId(_, d) 						-> d
-		| SBinop(_, _, _, d) 				-> d
-		| SAssign(_, _, d) 					-> d
-		| SCall(_, _, d)					-> d
-		| SUnop(_, _, d) 					-> d
-		| SMatrixAccess(_, _, _, d)			-> d
-		| SMatrixLit(sll, d)				->
-			let c = List.length (List.hd sll) in
-			let r = List.length sll in
-			(match d with
-				Datatype(Int) 		-> Datatype(Matrix(Int, IntLit(r), IntLit(c)))
-				| Datatype(Float)	-> Datatype(Matrix(Float, IntLit(r), IntLit(c)))
-				| _ 				-> raise(Failure"UnsupportedMatrixType"))
-		(* | SSubMatrix (_,_,_,_,_,d)  		-> d  *)
-		| STrace(_,_)						-> Datatype(Int)
+		| SubMatrix(s,e1,e2,e3,e4)  -> check_submatrix s e1 e2 e3 e4 fname_map func_st
+		(* | Mequal(s1, s2)			-> check_mequal s1 s2 func_st *)
 	in
-
-
-
-	(* Function Declaration Checking Functions *)
 
 
 	let rec stmt_to_sstmt fname_map func_st = function
@@ -301,6 +283,9 @@ let check_functions (globals, functions) =
 	List.fold_left
 		(fun m fd -> StringMap.add fd.fname fd m) StringMap.empty (fdecls @ built_in_decls)
 	in
+
+	(* Convert function decls to a StringMap of (name,decl) pairs*)
+	let fname_map = fdecls_to_fname_map functions in
 
 	let convert_fdecl_to_sfdecl fname_map fdecl =
 		{
@@ -327,7 +312,7 @@ let check_functions (globals, functions) =
 
 	let check_return fname_map fdecl func_st e =
 		let se = expr_to_sexpr fname_map func_st e in
-		let t = get_sexpr_type se in
+		let t = Sast.get_sexpr_type se in
 			(match fdecl.return_type with
 				Datatype(Matrix(d,IntLit(0),IntLit(0))) ->
 				 	(match t with
@@ -369,7 +354,7 @@ let check_functions (globals, functions) =
 
 	let sast =
 		(* Convert function decls to a StringMap of (name,decl) pairs*)
-		let fname_map = fdecls_to_fname_map functions in
+		(* let fname_map = fdecls_to_fname_map functions in *)
 		(* check for duplicate function names *)
 		report_duplicate (fun n -> "duplicate function " ^ n) (List.map (fun fd -> fd.fname) functions);
 		(* check functions *)
