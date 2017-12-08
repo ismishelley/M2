@@ -212,6 +212,13 @@ let check_functions (globals, functions) =
 				Datatype(Matrix(d, r, c)) -> STranspose(s, Datatype(Matrix(d, c, r)))
 				| _ -> raise(Failure"CannotUseTransposeOnNonMatrix")
 
+	
+
+	and check_trace s func_st =
+		let typ = get_ID_type s func_st in
+			match typ with
+				Datatype(Matrix(d, r, c)) -> STrace(s, Datatype(Matrix(d,r,c)))
+				| _ -> raise(Failure"CannotUseTraceOnNonMatrix")
 	(* and check_submatrix s e1 e2 e3 e4 fname_map func_st =
 		let se1 = expr_to_sexpr fname_map func_st e1 in
 		let se2 = expr_to_sexpr fname_map func_st e2 in
@@ -221,11 +228,6 @@ let check_functions (globals, functions) =
 			match typ with
 				Datatype(Matrix(d, r, c)) -> SSubMatrix(s, se1, se2, se3, se4, Datatype(Matrix(d,c,r)))
 				| _ -> raise(Failure"CannotUseSubMatrixOnNonMatrix") *)
-
-	and check_trace s func_st =
-		let typ = get_ID_type s func_st in
-			match typ with Datatype(Matrix(d, r, c)) -> STrace(s, Datatype(Matrix(d,r,c)))
-				| _ -> raise(Failure"CannotUseTraceOnNonMatrix")
 
 	and expr_to_sexpr fname_map func_st = function
 		  NumLit(IntLit(n))  		-> SNumLit(SIntLit(n))
