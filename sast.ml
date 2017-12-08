@@ -21,8 +21,38 @@ type sexpr =
 	| SRows of int
 	| SCols of int
 	| STranspose of string * datatype
-	(* | SSubMatrix of string * sexpr * sexpr * sexpr * sexpr * datatype *)
+	| SSubMatrix of string * sexpr * sexpr * sexpr * sexpr * datatype
 	| STrace of string * datatype
+	| SMequal of string * string * datatype
+
+let get_sexpr_type sexpr = match sexpr with
+	SNumLit(SIntLit(_))				-> Datatype(Int)
+	| SNumLit(SFloatLit(_))				-> Datatype(Float)
+	| SBoolLit(_)						-> Datatype(Bool)
+	| SStringLit(_) 					-> Datatype(String)
+	| SNoexpr 							-> Datatype(Void)
+	| SNull								-> Datatype(Void)
+	| SRows(r) 							-> Datatype(Int)
+	| SCols(c) 							-> Datatype(Int)
+	| STranspose(_,d) 					-> d
+	| SId(_, d) 						-> d
+	| SBinop(_, _, _, d) 				-> d
+	| SAssign(_, _, d) 					-> d
+	| SCall(_, _, d)					-> d
+	| SUnop(_, _, d) 					-> d
+	| SMatrixAccess(_, _, _, d)			-> d
+	| SMatrixLit(smlist, d)				->
+		let c = List.length (List.hd smlist) in
+		let r = List.length smlist in
+		(match d with
+			Datatype(Int) 		-> Datatype(Matrix(Int, IntLit(r), IntLit(c)))
+			| Datatype(Float)	-> Datatype(Matrix(Float, IntLit(r), IntLit(c)))
+			| _ 				-> raise(Failure"UnsupportedMatrixType"))
+	| SSubMatrix (_,_,_,_,_,d)  		-> d 
+	| STrace(_,d) 					-> d
+	| SSubMatrix(_,_,_,_,_,d)       -> d
+	(* | SMequal (_,_,d)				-> d *)
+
 
 (* Statements *)
 type sstmt =
@@ -43,4 +73,4 @@ type sfunc_decl = {
 }
 
 (* All method declarations | Main entry method *)
-type sprogram = bind list * func_decl list
+type sprogram = bind list * sfunc_decl list
