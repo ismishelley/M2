@@ -22,7 +22,7 @@ let _ =
   Arg.parse speclist (fun filename -> channel := open_in filename) usage_msg;
   let lexbuf = Lexing.from_channel !channel in
   let ast = Parser.program Scanner.token lexbuf in  
-  let sast = Semant.check_functions ast in
+  let sast = Semant.check ast in
   match !action with
     Ast -> print_string (Utils.string_of_program ast)
   | LLVM_IR -> print_string (Llvm.string_of_llmodule (Codegen.translate sast))

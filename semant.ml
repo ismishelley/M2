@@ -3,16 +3,6 @@ open Sast
 
 module StringMap = Map.Make(String)
 
-(* let get_equality_binop_type type1 type2 se1 se2 op =
-	if type1 = type2
-	then let t = match type1 with
-		Datatype(String) -> Datatype(String)
-		| Datatype(Int)  -> Datatype(Int)
-		| Datatype(Float) -> Datatype(Float)
-		| Datatype(Matrix(t,r,c)) -> Datatype(Matrix(t,r,c))
-		| _ -> raise (Failure "Equality operator only operates on int, float, String, and matrix")
-	in SBinop(se1, op, se2, t)
-	else raise (Failure "Equality operator only operates on int, float, String, and matrix") *)
 let get_equality_binop_type type1 type2 se1 se2 op =
 		if type1 = type2 && (type1 = Datatype(String) || type1 = Datatype(Int) || type1 = Datatype(Float)) then SBinop(se1, op, se2, type1)
 		else raise (Failure("Can only use equality operators with ints, float and Strings"))
@@ -56,7 +46,7 @@ let get_arithmetic_binop_type se1 se2 op = function
 
 
 (* top-level checking function *)
-let check_functions (globals, functions) =
+let check (globals, functions) =
 
 	(* Function for checking duplicates *)
 	let report_duplicate exceptf list =
@@ -74,10 +64,12 @@ let check_functions (globals, functions) =
 
 	in
 
+	(**** Checking Global Variables ****)
 	List.iter (check_not_void (fun n -> "illegal void global " ^ n)) globals;
 	report_duplicate (fun n -> "duplicate global " ^ n) (List.map snd globals);
 	
 
+	(**** Checking Functions ****)
 	(* add built-in print functions *)
 	let built_in_decls = 
 		let declare_func name return_type formals =
@@ -93,6 +85,7 @@ let check_functions (globals, functions) =
 			declare_func "printStr" 	(Datatype(Void)) 	([(Datatype(String), "string_in")]);
 			declare_func "printInt"		(Datatype(Void))	([(Datatype(Int), "int_in")]);
 			declare_func "printFloat"	(Datatype(Void))	([(Datatype(Float), "float_in")]);
+			declare_func "printBool"	(Datatype(Void))	([(Datatype(Bool), "bool_in")]);
 			declare_func "printbig"	    (Datatype(Void))	([(Datatype(Int), "big_in")]);
 		] 
 		in print_func_decls
@@ -236,11 +229,11 @@ let check_functions (globals, functions) =
 				Datatype(Matrix(d,r,c)) ->  SMequal(s1, s2, Datatype(Matrix(d,r,c)))
 		else raise(Failure"Mequal only operates for matrices of the same datatype")  *)
 
-	and check_norm1 s func_st = 
+(* 	and check_norm1 s func_st = 
 		let typ = get_ID_type s func_st in
 			match typ with
 				Datatype(Matrix(d, r, c)) -> SNorm1(s, Datatype(Matrix(d, r, c)))
-				| _ -> raise(Failure"CannotUseNormOnNonMatrix")
+				| _ -> raise(Failure"CannotUseNormOnNonMatrix") *)
 
 
 	and expr_to_sexpr fname_map func_st = function
@@ -266,8 +259,6 @@ let check_functions (globals, functions) =
 		| Transpose(s)				-> check_transpose s func_st
 		| Trace(s)  				-> check_trace s func_st
 		| SubMatrix(s,e1,e2,e3,e4)  -> check_submatrix s e1 e2 e3 e4 fname_map func_st
-		(* | Mequal(s1, s2)			-> check_mequal s1 s2 func_st *)
-		(* | Norm1(s)					-> check_norm1 s func_st *)
 	in
 
 

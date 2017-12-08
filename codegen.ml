@@ -366,63 +366,12 @@ let translate(globals, functions) =
                         done;
                         L.build_load tmp_s "restmp" builder
                     | _ -> raise(Failure "Cannot calculate trace!"))
-(*             | S.SMequal(s1,s2,d) -> 
-                (let alloctype = match d with
-                    Datatype(Matrix(Int, c, r)) -> i32_t 
-                    | Datatype(Matrix(Float, c, r)) -> float_t
-                    | _ -> raise(Failure "non-supported type for matrix") in
-                    match d with Datatype(Matrix(Int, c, r))| Datatype(Matrix(Float, c, r)) ->
-                        let c' = (match c with IntLit(n) -> n | _ -> -1) in
-                        let r' = (match r with IntLit(n) -> n | _ -> -1) in
-                        let tmp = L.build_alloca (array_t (array_t i32_t c') r') "tmpmat" builder in
-                        for i=0 to (r'-1) do
-                            for j=0 to (c'-1) do
-                                let m1 = build_matrix_access r' c' s1 (L.const_int i32_t i) (L.const_int i32_t j) builder false in
-                                let m2 = build_matrix_access r' c' s2 (L.const_int i32_t i) (L.const_int i32_t j) builder false in
-                                let sub_res = L.build_alloca alloctype "tmps" builder in
-                                ignore(L.build_store ( L.build_sub m1 m2 "tmp" builder) sub_res builder);
-                                let add_res = 
-                                    if L.build_load sub_res "tmpsub" builder = L.const_int i32_t 0
-                                    then (L.const_int i32_t 1) 
-                                    else (L.const_int i32_t 9) in 
-                                let ld = L.build_gep tmp [| L.const_int i32_t 0; L.const_int i32_t i; L.const_int i32_t j |] "tmpmat" builder in
-                                        ignore(build_store sub_res ld builder);
-                            done
-                        done;
-                        L.build_load (L.build_gep tmp [| L.const_int i32_t 0 |] "tmpmat" builder) "tmpmat" builder
-                    | _ -> const_int i32_t 0) *)
-
-            (* | S.SNorm1(s, d) -> 
-                (* L.const_int i32_t 0 *)
-                (let alloctype = match d with
-                    Datatype(Matrix(Int, c, r)) -> i32_t | Datatype(Matrix(Float, c, r)) -> float_t| _ -> i32_t in
-                let buildtype = match d with
-                    Datatype(Matrix(Int, c, r)) -> L.build_add | Datatype(Matrix(Float, c, r)) -> L.build_fadd| _ -> L.build_add in
-                match d with Datatype(Matrix(Int, c, r))| Datatype(Matrix(Float, c, r)) ->
-                    let c_tr = (match c with IntLit(n) -> n | _ -> -1) in
-                    let r_tr = (match r with IntLit(n) -> n | _ -> -1) in
-                    let tmp_1 = L.build_alloca alloctype "tmpsum" builder in
-                    ignore(L.build_store (L.const_int i32_t 0) tmp_1 builder);
-                    for i=0 to (c_tr-1) do
-                        let tmp_2 = L.build_alloca alloctype "tmpsum2" builder in
-                        ignore(L.build_store (L.const_int i32_t 0) tmp_2 builder);
-                        for j=0 to (r_tr-1) do
-                                let mult_res = build_matrix_access r_tr c_tr s (L.const_int i32_t j) (L.const_int i32_t i) builder false in
-                                ignore(L.build_store (buildtype mult_res (L.build_load tmp_2 "addtmp" builder) "tmp" builder) tmp_2 builder);
-                        done;
-                        let a1 = L.build_load tmp_1 "restmp1" builder in
-                        let a2 = L.build_load tmp_2 "restmp2" builder in
-                        if a1 < a2
-                        then ignore(L.build_store (L.build_load tmp_2 "restmp3" builder) tmp_1 builder)
-                        else ()
-                    done;
-                    let aa = L.build_load tmp_1 "restmp" builder in aa
-                | _ -> raise(Failure "Cannot calculate Norm1")) *)
-
             | S.SCall ("printStr", [e], d) ->
                 L.build_call printf_func [| string_format_str ; (expr builder e) |] "printf" builder
             | S.SCall ("printInt", [e], d) ->
                 L.build_call printf_func [| int_format_str ; (expr builder e) |] "printf" builder
+            | S.SCall ("printBool", [e], d) ->
+                L.build_call printf_func [| int_format_str ; (expr builder e) |] "printf" builder    
             | S.SCall ("printFloat", [e], d) ->
                 L.build_call printf_func [| float_format_str ; (expr builder e) |] "printf" builder
             | S.SCall (f, act, d) ->

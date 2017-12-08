@@ -51,10 +51,6 @@ let get_sexpr_type sexpr = match sexpr with
 			| _ 				-> raise(Failure"UnsupportedMatrixType"))
 	| SSubMatrix (_,_,_,_,_,d)  	-> d 
 	| STrace(_,d) 					-> d
-	| SSubMatrix(_,_,_,_,_,d)       -> d
-	(* | SMequal (_,_,d)				-> d *)
-	| SNorm1(_,d)					-> d
-
 
 (* Statements *)
 type sstmt =

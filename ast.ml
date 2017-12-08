@@ -33,8 +33,6 @@ type expr =
 	| Transpose of string
 	| SubMatrix of string * expr * expr * expr * expr
 	| Trace of string
-	(* | Mequal of string * string *)
-	(* | Norm1 of string *)
 
 (* Statements *)
 type stmt =

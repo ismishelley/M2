@@ -102,7 +102,6 @@ and string_of_sexpr = function
 	| STranspose(s, _)				-> "STranspose"
 	| SSubMatrix(_,_,_,_,_,_)			-> "SSubMatrix"
 	| STrace (s,_)					-> "STrace"
-	| SNorm1(s,_)					-> "SNorm1"
 
 let string_of_local_expr = function
 		Noexpr -> ""
