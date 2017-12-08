@@ -67,6 +67,7 @@ rule token = parse
 	| "trace" { TRACE }
 	| "submatrix" { SUBMATRIX }
 	(*| "mequal" { MEQUAL }*)
+	(*| "norm1" { NORM1 }*)
 
 	(* Literals, Identifiers, EOF *)
 	| ['0'-'9']+ as lxm { NUM_LIT(Ast.IntLit(int_of_string lxm)) }

@@ -24,7 +24,7 @@
 
 /* Matrix-related */
 /*%token  ROWS COLS TRANSPOSE TRACE SUBMATRIX MEQUAL*/
-%token  ROWS COLS TRANSPOSE TRACE SUBMATRIX
+%token  ROWS COLS TRANSPOSE TRACE SUBMATRIX NORM1
 
 /* Literals, Identifiers, EOF */
 %token <Ast.num> NUM_LIT
@@ -141,6 +141,7 @@ expr:
   | ID COLON TRACE                                              { Trace($1) }
   | ID COLON SUBMATRIX expr expr expr expr                      { SubMatrix($1, $4, $5, $6, $7) }
   /*| ID COLON MEQUAL ID                                          { Mequal ($1, $4) }*/
+  /*| ID COLON NORM1                                               { Norm1 ($1) }*/
 
 actuals_opt:
     /* nothing */                   { [] }

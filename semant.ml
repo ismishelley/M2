@@ -15,7 +15,7 @@ module StringMap = Map.Make(String)
 	else raise (Failure "Equality operator only operates on int, float, String, and matrix") *)
 let get_equality_binop_type type1 type2 se1 se2 op =
 		if type1 = type2 && (type1 = Datatype(String) || type1 = Datatype(Int) || type1 = Datatype(Float)) then SBinop(se1, op, se2, type1)
-		else raise (Exceptions.InvalidBinopExpression("Can only use equality operators with ints and Strings"))
+		else raise (Failure("Can only use equality operators with ints, float and Strings"))
 
 let get_logical_binop_type se1 se2 op = function
 		| (Datatype(Bool), Datatype(Bool)) -> SBinop(se1, op, se2, Datatype(Bool))
@@ -57,10 +57,6 @@ let get_arithmetic_binop_type se1 se2 op = function
 
 (* top-level checking function *)
 let check_functions (globals, functions) =
-(* 
-	let global_symbol_table = List.fold_left
-			(fun m (t,n) -> StringMap.add n t m) StringMap.empty globals
-	in *)
 
 	(* Function for checking duplicates *)
 	let report_duplicate exceptf list =
@@ -240,6 +236,13 @@ let check_functions (globals, functions) =
 				Datatype(Matrix(d,r,c)) ->  SMequal(s1, s2, Datatype(Matrix(d,r,c)))
 		else raise(Failure"Mequal only operates for matrices of the same datatype")  *)
 
+	and check_norm1 s func_st = 
+		let typ = get_ID_type s func_st in
+			match typ with
+				Datatype(Matrix(d, r, c)) -> SNorm1(s, Datatype(Matrix(d, r, c)))
+				| _ -> raise(Failure"CannotUseNormOnNonMatrix")
+
+
 	and expr_to_sexpr fname_map func_st = function
 		  NumLit(IntLit(n))  		-> SNumLit(SIntLit(n))
 		| NumLit(FloatLit(n))		-> SNumLit(SFloatLit(n))
@@ -264,6 +267,7 @@ let check_functions (globals, functions) =
 		| Trace(s)  				-> check_trace s func_st
 		| SubMatrix(s,e1,e2,e3,e4)  -> check_submatrix s e1 e2 e3 e4 fname_map func_st
 		(* | Mequal(s1, s2)			-> check_mequal s1 s2 func_st *)
+		(* | Norm1(s)					-> check_norm1 s func_st *)
 	in
 
 

@@ -23,7 +23,8 @@ type sexpr =
 	| STranspose of string * datatype
 	| SSubMatrix of string * sexpr * sexpr * sexpr * sexpr * datatype
 	| STrace of string * datatype
-	| SMequal of string * string * datatype
+	(* | SMequal of string * string * datatype *)
+	(* | SNorm1 of string * datatype *)
 
 let get_sexpr_type sexpr = match sexpr with
 	SNumLit(SIntLit(_))				-> Datatype(Int)
@@ -48,10 +49,11 @@ let get_sexpr_type sexpr = match sexpr with
 			Datatype(Int) 		-> Datatype(Matrix(Int, IntLit(r), IntLit(c)))
 			| Datatype(Float)	-> Datatype(Matrix(Float, IntLit(r), IntLit(c)))
 			| _ 				-> raise(Failure"UnsupportedMatrixType"))
-	| SSubMatrix (_,_,_,_,_,d)  		-> d 
+	| SSubMatrix (_,_,_,_,_,d)  	-> d 
 	| STrace(_,d) 					-> d
 	| SSubMatrix(_,_,_,_,_,d)       -> d
 	(* | SMequal (_,_,d)				-> d *)
+	| SNorm1(_,d)					-> d
 
 
 (* Statements *)
