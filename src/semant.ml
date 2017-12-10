@@ -3,17 +3,17 @@ open Sast
 
 module StringMap = Map.Make(String)
 
-let getEqualType se1 se2 op = function
+let checkEqualType se1 se2 op = function
 		(Datatype(Int),Datatype(Int)) -> SBinop(se1, op, se2, Datatype(Int))
 		| (Datatype(Float), Datatype(Float)) -> SBinop(se1, op, se2, Datatype(Float))
 		| (Datatype(String), Datatype(String)) -> SBinop(se1, op, se2, Datatype(String))
 		| _ -> raise (Failure "Invalid type for equality operators")
 
-let getLogicalType se1 se2 op = function
+let checkLogicalType se1 se2 op = function
 		(Datatype(Bool), Datatype(Bool)) -> SBinop(se1, op, se2, Datatype(Bool))
 		| _ -> raise (Failure "Invalid type for logical operators")
 
-let getArithmeticType se1 se2 op = function
+let checkArithmeticType se1 se2 op = function
 		  (Datatype(Int), Datatype(Float)) 
 		| (Datatype(Float), Datatype(Int)) 
 		| (Datatype(Float), Datatype(Float)) 	-> SBinop(se1, op, se2, Datatype(Float))
@@ -22,24 +22,24 @@ let getArithmeticType se1 se2 op = function
 			(match op with
 				Add -> SBinop(se1, op, se2, Datatype(String))
 				| _ -> raise(Failure "Invalid operation on String"))
-		| (Datatype(Matrix(typ1, i1, j1)), Datatype(Matrix(typ2, i2, j2))) ->
+		| (Datatype(Matrix(typ1, r1, c1)), Datatype(Matrix(typ2, r2, c2))) ->
 			(match op with
 				Add | Sub 	->
-					if typ1=typ2 && i1=i2 && j1=j2 then
-						SBinop(se1, op, se2, Datatype(Matrix(typ1, i1, j2)))
-					else raise(Failure "Incorrect dimention/type for matrix addition/subtract")
+					if typ1=typ2 && r1=r2 && c1=c2 then
+						SBinop(se1, op, se2, Datatype(Matrix(typ1, r1, c2)))
+					else raise(Failure "Incorrect dimention/type for matrix addition/subtraction")
 				| Mult 		->
-					if typ1=typ2 && j1 = i2 then
-						SBinop(se1, op, se2, Datatype(Matrix(typ1, i1, j2)))
+					if typ1=typ2 && c1 = r2 then
+						SBinop(se1, op, se2, Datatype(Matrix(typ1, r1, c2)))
 					else raise(Failure "Incorrect dimention/type for matrix multiplication")
 				| _ -> raise(Failure("Invalid operation on matrix")))
-		| (Datatype(Int), Datatype(Matrix(Int,i,j))) ->
+		| (Datatype(Int), Datatype(Matrix(Int,r,c))) ->
 			(match op with
-				Mult -> SBinop(se1, op, se2, Datatype(Matrix(Int, i, j)))
+				Mult -> SBinop(se1, op, se2, Datatype(Matrix(Int, r, c)))
 				| _ -> raise(Failure "Invalid operation between integer and matrix"))
-		| (Datatype(Float), Datatype(Matrix(Float,i,j))) ->
+		| (Datatype(Float), Datatype(Matrix(Float,r,c))) ->
 			(match op with
-				Mult -> SBinop(se1, op, se2, Datatype(Matrix(Float, i, j)))
+				Mult -> SBinop(se1, op, se2, Datatype(Matrix(Float, r, c)))
 				| _ -> raise(Failure("Invalid operation between float and matrix")))
 		| _ -> raise (Failure("Invalid type for arithmetic operators"))
 
@@ -110,7 +110,7 @@ let check (globals, functions) =
 	(* check if s is the name of a declared function *)
 	let function_decl s =
 		try StringMap.find s function_decls
-		with Not_found -> raise (Failure "FunctionNotFound")
+		with Not_found -> raise (Failure "Unrecognized function")
 	in
 
 	let _ = function_decl "main" in
@@ -142,7 +142,7 @@ let check (globals, functions) =
 	and check_expr_is_int symbols e = match e with
 		NumLit(IntLit(n)) -> Datatype(Int)
 		| Id(s) 			-> type_of_identifier s symbols
-		| _ -> raise(Failure"Integer required for matrix dimension")
+		| _ -> raise(Failure"Integer required for matrix dimension/index")
 
 	and lit_to_slit n = match n with
 		IntLit(n) -> SNumLit(SIntLit(n))
@@ -184,10 +184,10 @@ let check (globals, functions) =
 										let type1 = Sast.get_sexpr_type se1 in
 										let type2 = Sast.get_sexpr_type se2 in
 											(match op with
-											Equal | Neq -> getEqualType se1 se2 op (type1, type2)
-											| And | Or -> getLogicalType se1 se2 op (type1, type2)
+											Equal | Neq -> checkEqualType se1 se2 op (type1, type2)
+											| And | Or -> checkLogicalType se1 se2 op (type1, type2)
 											| Less | Leq | Greater | Geq when type1 = type2 && (type1 = Datatype(Int) || type1 = Datatype(Float)) -> SBinop(se1, op, se2, type1)
-											| Add | Mult | Sub | Div -> getArithmeticType se1 se2 op (type1, type2)
+											| Add | Mult | Sub | Div -> checkArithmeticType se1 se2 op (type1, type2)
 											| _ -> raise (Failure "Invalid binary operator"))
 		| Call(fname, actuals)		-> let fd = function_decl fname in
 										if List.length actuals != List.length fd.formals then
@@ -227,19 +227,24 @@ let check (globals, functions) =
 		| Transpose(s)				-> let typ = type_of_identifier s symbols in
 										(match typ with
 											Datatype(Matrix(d, r, c)) -> STranspose(s, Datatype(Matrix(d, c, r)))
-											| _ -> raise(Failure"Cannot operate on nonmatrix"))
+											| _ -> raise(Failure"Cannot operate on nonmatrix"))									
 		| Trace(s)					-> let typ = type_of_identifier s symbols in
 										(match typ with 
-										Datatype(Matrix(d, r, c)) -> STrace(s, Datatype(Matrix(d,r,c)))
+										Datatype(Matrix(d, r, c)) -> (if r = c then STrace(s, Datatype(Matrix(d,r,c)))
+																	else raise(Failure "Trace only operates on square matrices"))
 											| _ -> raise(Failure"Cannot operator on nonmatrix"))
-		| SubMatrix(s,e1,e2,e3,e4)  -> let se1 = sexpr symbols e1 in
+		| SubMatrix(s,e1,e2,e3,e4)  -> ignore(check_expr_is_int symbols e1);
+										ignore(check_expr_is_int symbols e2);
+										ignore(check_expr_is_int symbols e3);
+										ignore(check_expr_is_int symbols e4);
+										let se1 = sexpr symbols e1 in
 										let se2 = sexpr symbols e2 in
 										let se3 = sexpr symbols e3 in
 										let se4 = sexpr symbols e4 in
 										let typ = type_of_identifier s symbols in
-											match typ with 
-											Datatype(Matrix(d,r,c)) ->  SSubMatrix(s, se1, se2, se3, se4, Datatype(Matrix(d,r,c)))
-											| _ -> raise(Failure"Cannot operator on nonmatrix")
+											(match typ with 
+											Datatype(Matrix(d,r,c)) -> SSubMatrix(s, se1, se2, se3, se4, Datatype(Matrix(d,r,c)))
+											| _ -> raise(Failure"Cannot operator on nonmatrix"))
 	in
 
 	let check_bool_expr symbols e = 
@@ -272,10 +277,9 @@ let check (globals, functions) =
 		}
 	in
 	
+(* check functions *)
+ignore(List.iter check_function functions);
 
-	(* check functions *)
-	ignore(List.iter check_function functions);
-
-	(* convert func to sfunc *)
-	let sfuncs = List.map func_to_sfunc functions 
-	in	(globals, sfuncs)
+(* convert func to sfunc *)
+let sfuncs = List.map func_to_sfunc functions 
+in	(globals, sfuncs)
