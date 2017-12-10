@@ -45,7 +45,7 @@ type stmt =
 
 (* Function Declarations *)
 type func_decl = {
-	return_type : datatype;
+	typ 		: datatype;
 	fname 		: string;
 	formals 	: bind list;
 	locals  	: bind list;

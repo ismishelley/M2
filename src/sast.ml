@@ -63,7 +63,7 @@ type sstmt =
 
 (* Function Declarations *)
 type sfunc_decl = {
-	sreturn_type 	: datatype;
+	styp 	: datatype;
 	sfname 			: string;
 	sformals 		: bind list;
 	slocals  		: bind list;

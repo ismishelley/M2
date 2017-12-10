@@ -3,11 +3,6 @@ open Ast
 open Sast
 open Parser
 
-let save file string =
-	 let channel = open_out file in
-	 output_string channel string;
-	 close_out channel
-
 let string_of_num = function
 		IntLit(x) -> string_of_int x
 	| FloatLit(x) -> string_of_float x
@@ -68,8 +63,9 @@ and string_of_expr = function
 	| MatrixAccess (s, i, j) 	-> (s) ^ "[" ^ (string_of_expr i) ^ "," ^ (string_of_expr j) ^ "]"
 	| Rows(s)					-> (s) ^ ":rows"
 	| Cols(s)					-> (s) ^ ":cols"
-	| Transpose(s)				-> (s) ^ ":tr"
+	| Transpose(s)				-> (s) ^ ":transpose"
 	| Trace(s)                  -> (s) ^ ":trace"
+	| SubMatrix(s,e1,e2,e3,e4)  -> (s) ^ ":submatrix"
 
 let string_of_snum = function
 		SIntLit(x) -> string_of_int x
@@ -102,10 +98,8 @@ and string_of_sexpr = function
 	| STranspose(s, _)				-> "STranspose"
 	| SSubMatrix(_,_,_,_,_,_)			-> "SSubMatrix"
 	| STrace (s,_)					-> "STrace"
+	| SSubMatrix(s,_,_,_,_,_)		-> "SSubMatrix"
 
-let string_of_local_expr = function
-		Noexpr -> ""
-	|  	e 	   -> " = " ^ string_of_expr e
 
 (* Print statements *)
 let rec string_of_stmt indent =
@@ -142,55 +136,13 @@ let rec string_of_stmt indent =
 
 	in get_stmt_string
 
-let string_of_local_sexpr = function
-		SNoexpr 	-> ""
-	|  	e 	   		-> " = " ^ string_of_sexpr e
-
-let rec string_of_sstmt indent =
-	let indent_string = String.make indent '\t' in
-	let get_stmt_string = function
-
-			SBlock(stmts) 			->
-				indent_string ^ "{\n" ^
-					String.concat "" (List.map (string_of_sstmt (indent+1)) stmts) ^
-				indent_string ^ "}\n"
-
-		| 	SExpr(expr) 				->
-				indent_string ^ string_of_sexpr expr ^ ";\n";
-
-		| 	SReturn(expr) 			->
-				indent_string ^ "return " ^ string_of_sexpr expr ^ ";\n";
-
-		| 	SIf(e, s, SBlock([SExpr(SNoexpr)])) 	->
-				indent_string ^ "if (" ^ string_of_sexpr e ^ ")\n" ^
-					(string_of_sstmt (indent+1) s)
-
-		| 	SIf(e, s1, s2) 			->
-				indent_string ^ "if (" ^ string_of_sexpr e ^ ")\n" ^
-					string_of_sstmt (indent+1) s1 ^
-				indent_string ^ "else\n" ^
-					string_of_sstmt (indent+1) s2
-
-		| 	SFor(e1, e2, e3, s) 		->
-				indent_string ^ "for (" ^ string_of_sexpr e1  ^ " ; " ^ string_of_sexpr e2 ^ " ; " ^ string_of_sexpr e3  ^ ")\n" ^
-					string_of_sstmt (indent) s
-
-		| 	SWhile(e, s) 			->
-				indent_string ^ "while (" ^ string_of_sexpr e ^ ")\n" ^
-					string_of_sstmt (indent) s
-
-	in get_stmt_string
-
 (* Print Function *)
 
 let string_of_fl = function
 	(d, s) -> (string_of_datatype d) ^ " " ^ s
 
-let string_of_formal_name = function
-	(_, s) -> s
-
 let string_of_func_decl fdecl =
-	"" ^ (string_of_datatype fdecl.return_type) ^ " " ^ (fdecl.fname) ^ " " ^
+	"" ^ (string_of_datatype fdecl.typ) ^ " " ^ (fdecl.fname) ^ " " ^
 	(* Formals *)
 	"(" ^ String.concat "," (List.map string_of_fl fdecl.formals) ^ ") {\n" ^
 	(* Locals *)
