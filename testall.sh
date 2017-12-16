@@ -7,7 +7,6 @@
 
 # Path to the LLVM interpreter
 # LLI="lli"
-# LLI="/usr/local/opt/llvm/bin/lli"
 LLI="/usr/local/opt/llvm@3.7/bin/lli-3.7"
 
 # Path to the LLVM compiler
@@ -93,11 +92,9 @@ Check() {
 
     generatedfiles=""
 
-    generatedfiles="$generatedfiles ${basename}.ll ${basename}.s ${basename}.exe ${basename}.out" &&
-    Run "$M2" "$1" ">" "${basename}.ll" &&
-    Run "$LLC" "${basename}.ll" ">" "${basename}.s" &&
-    Run "$CC" "-o" "${basename}.exe" "${basename}.s" "printbig.o" &&
-    Run "./${basename}.exe" > "${basename}.out" &&
+    generatedfiles="$generatedfiles ${basename}.ll ${basename}.s ${basename}.exe ${basename}.out" &&    
+    Run "$M2" "-c" $1 ">" "${basename}.ll" &&
+    Run "$LLI" "${basename}.ll" ">" "${basename}.out" &&
     Compare ${basename}.out ${reffile}.out ${basename}.diff
 
     # Report the status and clean up the generated files
@@ -129,7 +126,7 @@ CheckFail() {
     generatedfiles=""
 
     generatedfiles="$generatedfiles ${basename}.err ${basename}.diff" &&
-    RunFail "$M2" "<" $1 "2>" "${basename}.err" ">>" $globallog &&
+    RunFail "$M2" "-c" $1 "2>" "${basename}.err" ">>" $globallog &&
     Compare ${basename}.err ${reffile}.err ${basename}.diff
 
     # Report the status and clean up the generated files
@@ -167,12 +164,6 @@ LLIFail() {
 
 which "$LLI" >> $globallog || LLIFail
 
-if [ ! -f printbig.o ]
-then
-    echo "Could not find printbig.o"
-    echo "Try \"make printbig.o\""
-    exit 1
-fi
 
 if [ $# -ge 1 ]
 then
