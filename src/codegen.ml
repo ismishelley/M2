@@ -37,13 +37,9 @@ let translate (globals, functions) =
                 | _ -> raise(Failure"Invalid datatype for matrix"))
     in
 
-    let ltype_of_datatype = function
-        A.Datatype(p) -> ltype_of_typ p
-    in
-
     let global_vars =
         let global_var m (t,n) =
-        let init = L.const_int (ltype_of_datatype t) 0
+        let init = L.const_int (ltype_of_typ t) 0
         in  StringMap.add n (L.define_global n init the_module) m in
         List.fold_left global_var StringMap.empty globals in
 
@@ -57,9 +53,9 @@ let translate (globals, functions) =
         let function_decl m fdecl =
             let name = fdecl.S.sfname
             and formal_types = Array.of_list
-                (List.map (function A.(t,s) -> ltype_of_datatype t) fdecl.S.sformals) in
+                (List.map (function A.(t,s) -> ltype_of_typ t) fdecl.S.sformals) in
             let ftype =
-                L.function_type (ltype_of_datatype fdecl.S.styp) formal_types in
+                L.function_type (ltype_of_typ fdecl.S.styp) formal_types in
                 StringMap.add name (L.define_function name ftype the_module, fdecl) m in
         List.fold_left function_decl StringMap.empty functions
     in
@@ -75,13 +71,13 @@ let translate (globals, functions) =
 
         let local_vars =
             let add_formal m (t, n) p = L.set_value_name n p;
-            let local = L.build_alloca (ltype_of_datatype t) n builder in
+            let local = L.build_alloca (ltype_of_typ t) n builder in
             ignore (L.build_store p local builder);
             StringMap.add n local m
         in
 
         let add_local m (t, n) =
-            let local_var = L.build_alloca (ltype_of_datatype t) n builder
+            let local_var = L.build_alloca (ltype_of_typ t) n builder
             in StringMap.add n local_var m
         in
 
@@ -183,7 +179,7 @@ let translate (globals, functions) =
                                     let first_typ = Sast.get_sexpr_type op1 in
                                     let tmp_m = L.build_alloca (array_t (array_t operator_type cDimension) rDimension) "tmpmat" builder in
                                     (match first_typ with
-                                        Datatype(Int)| Datatype(Float) ->
+                                        Int| Float ->
                                             for i=0 to (rDimension-1) do
                                                 for j=0 to (cDimension-1) do
                                                     let m2 = build_matrix_access rhs_str (L.const_int i32_t i) (L.const_int i32_t j) builder false in
@@ -194,7 +190,7 @@ let translate (globals, functions) =
                                             done;
                                             L.build_load (L.build_gep tmp_m [| L.const_int i32_t 0 |] "tmpmat" builder) "tmpmat" builder
                                         
-                                        | Datatype(Matrix(Int,r1,c1)) ->
+                                        | Matrix(Int,r1,c1) ->
                                             let tmp_s = L.build_alloca operator_type "tmpsum" builder in
                                             let c1_i = (match c1 with IntLit(n) -> n | _ -> -1) in
                                             ignore(L.build_store (operator_type2 operator_type 0) tmp_s builder);
@@ -212,7 +208,7 @@ let translate (globals, functions) =
                                                 done
                                             done;
                                             L.build_load (L.build_gep tmp_m [| L.const_int i32_t 0 |] "tmpmat" builder) "tmpmat" builder
-                                        | Datatype(Matrix(Float,r1,c1)) ->
+                                        | Matrix(Float,r1,c1) ->
                                             let tmp_s = L.build_alloca float_t "tmpsum" builder in
                                                 let c1_i = (match c1 with IntLit(n) -> n | _ -> -1) in
                                                 ignore(L.build_store (L.const_float float_t 0.0) tmp_s builder);
@@ -237,21 +233,21 @@ let translate (globals, functions) =
 
                 let cast operand1 operand2 type1 type2 =
                     match (type1, type2) with
-                        (Datatype(Int), Datatype(Int))          ->  int_bops op operand1 operand2
-                        | (Datatype(Float), Datatype(Float))    ->  float_bops op operand1 operand2
-                        | (Datatype(Bool), Datatype(Bool))      ->  bool_bops op operand1 operand2
-                        | (Datatype(Int), Datatype(Matrix(Int,r1,c2))) -> let rDimension = (match r1 with IntLit(n) -> n | _ -> -1)
+                        (Int, Int)          ->  int_bops op operand1 operand2
+                        | (Float, Float)    ->  float_bops op operand1 operand2
+                        | (Bool, Bool)      ->  bool_bops op operand1 operand2
+                        | (Int, Matrix(Int,r1,c2)) -> let rDimension = (match r1 with IntLit(n) -> n | _ -> -1)
                                 and cDimension = (match c2 with IntLit(n) -> n | _ -> -1) in
                                     matrix_bops "int" rDimension cDimension op op1 op2  
-                        | (Datatype(Float), Datatype(Matrix(Float,r1,c2))) ->
+                        | (Float, Matrix(Float,r1,c2)) ->
                             let rDimension = (match r1 with IntLit(n) -> n | _ -> -1)
                                 and cDimension = (match c2 with IntLit(n) -> n | _ -> -1) in
                                     matrix_bops "float" rDimension cDimension op op1 op2  
-                        | (Datatype(Matrix(Int,r1,c1)), Datatype(Matrix(Int,r2,c2))) ->
+                        | (Matrix(Int,r1,c1), Matrix(Int,r2,c2)) ->
                             let rDimension = (match r1 with IntLit(n) -> n | _ -> -1)
                                 and cDimension = (match c2 with IntLit(n) -> n | _ -> -1) in
                                     matrix_bops "int" rDimension cDimension op op1 op2  
-                        | (Datatype(Matrix(Float,r1,c1)), Datatype(Matrix(Float,r2,c2))) ->
+                        | (Matrix(Float,r1,c1), Matrix(Float,r2,c2)) ->
                             let rDimension = (match r1 with IntLit(n) -> n | _ -> -1)
                                 and cDimension = (match c2 with IntLit(n) -> n | _ -> -1) in
                                     matrix_bops "float" rDimension cDimension op op1 op2  
@@ -262,15 +258,15 @@ let translate (globals, functions) =
             | S.SUnop(op, e, d)         ->
                 let e' = expr builder e in 
                 (match d with
-                Datatype(Int) -> (match op with
+                Int -> (match op with
                         A.Neg     -> L.build_neg e' "tmp" builder
                         | A.Inc   -> L.build_store (L.build_add e' (L.const_int i32_t 1) "tmp" builder) (lookup (match e with S.SId(s, d) -> s | _->raise(Failure"IncMustBeCalledOnID"))) builder
                         | A.Dec   -> L.build_store (L.build_sub e' (L.const_int i32_t 1) "tmp" builder) (lookup (match e with S.SId(s, d) -> s | _->raise(Failure"DecMustBeCalledOnID"))) builder
                         | _       -> raise(Failure"IllegalIntUnop"))
-                | Datatype(Float) -> (match op with
+                | Float -> (match op with
                         A.Neg   -> L.build_fneg e' "tmp" builder
                         | _     -> raise(Failure"IllegalFloatUnop"))
-                | Datatype(Bool) -> (match op with
+                | Bool -> (match op with
                         A.Not   -> L.build_not e' "tmp" builder
                         | _       -> raise(Failure"IllegalBoolUnop"))
                 | _ -> (raise(Failure"InvalidUnopType")))
@@ -297,7 +293,7 @@ let translate (globals, functions) =
                 let actuals = List.rev (List.map (expr builder) (List.rev act)) in
                 let result =
                     (match fdecl.S.styp with
-                        A.Datatype(A.Void) -> ""
+                        A.Void -> ""
                         | _ -> f ^ "_result") in
                 L.build_call fdef (Array.of_list actuals) result builder
             | S.SNoexpr                -> L.const_int i32_t 0
@@ -305,7 +301,7 @@ let translate (globals, functions) =
             | S.SCols(c)                -> L.const_int i32_t c
             | S.STranspose(s,d)         ->
                 (match d with
-                    Datatype(Matrix(Int, c, r)) ->
+                    Matrix(Int, c, r) ->
                         let r_tr = (match c with IntLit(n) -> n | _ -> -1) in
                         let c_tr = (match r with IntLit(n) -> n | _ -> -1) in
                         let tmp_tr = L.build_alloca (array_t (array_t i32_t c_tr) r_tr) "tmpmat" builder in
@@ -320,8 +316,8 @@ let translate (globals, functions) =
                     | _ -> const_int i32_t 0)
             | S.SSubMatrix(s, r1, r2, c1, c2, d) ->
                 (let alloctype = match d with
-                    Datatype(Matrix(Int, c, r)) -> i32_t | Datatype(Matrix(Float, c, r)) -> float_t| _ -> i32_t in
-                    match d with Datatype(Matrix(Int, c, r))| Datatype(Matrix(Float, c, r)) ->
+                    Matrix(Int, c, r) -> i32_t | Matrix(Float, c, r) -> float_t| _ -> i32_t in
+                    match d with Matrix(Int, c, r)| Matrix(Float, c, r) ->
                         let r1' = (match r1 with SNumLit(SIntLit(n)) -> n | _ -> -1) in
                         let r2' = (match r2 with SNumLit(SIntLit(n)) -> n | _ -> -1) in
                         let c1' = (match c1 with SNumLit(SIntLit(n)) -> n | _ -> -1) in
@@ -338,18 +334,18 @@ let translate (globals, functions) =
                     | _ -> const_int i32_t 0)
             | S.STrace(s, d) -> 
                 (let alloctype = match d with
-                    Datatype(Matrix(Int, c, r)) -> i32_t 
-                    | Datatype(Matrix(Float, c, r)) -> float_t
+                    Matrix(Int, c, r) -> i32_t 
+                    | Matrix(Float, c, r) -> float_t
                     | _ -> i32_t 
                 in
                 let buildtype = match d with
-                    Datatype(Matrix(Int, c, r)) -> L.build_add 
-                    | Datatype(Matrix(Float, c, r)) -> L.build_fadd
+                    Matrix(Int, c, r) -> L.build_add 
+                    | Matrix(Float, c, r) -> L.build_fadd
                     | _ -> L.build_add 
                 in
                 match d with
-                    Datatype(Matrix(Int, c, r)) 
-                    | Datatype(Matrix(Float, c, r)) ->
+                    Matrix(Int, c, r)
+                    | Matrix(Float, c, r) ->
                         let c_tr = (match c with IntLit(n) -> n | _ -> -1) in
                         let tmp_s = L.build_alloca alloctype "tmpsum" builder in
                         ignore(L.build_store (L.const_int i32_t 0) tmp_s builder);
@@ -362,16 +358,16 @@ let translate (globals, functions) =
             | S.SMatrixAccess (s, se1, se2, d) ->
                 let i = expr builder se1 and j = expr builder se2 in
                     (build_matrix_access s i j builder false)
-            | S.SMatrixLit (sll, d) -> let numtype = match d with A.Datatype(A.Float) -> float_t
-                                                                | A.Datatype(A.Int) -> i32_t
+            | S.SMatrixLit (smlist, d) -> let numtype = match d with A.Float -> float_t
+                                                                | A.Int -> i32_t
                                                                 | _ -> i32_t
                                          in
-                                            let flipped = List.map List.rev sll in
+                                            let flipped = List.map List.rev smlist in
                                             let lists        = List.map (List.map (expr builder)) flipped in
                                             let listArray    = List.map Array.of_list lists in
                                             let listArray2 = List.rev (List.map (L.const_array numtype) listArray) in
                                             let arrayArray   = Array.of_list listArray2 in
-                                            L.const_array (array_t numtype (List.length (List.hd sll))) arrayArray
+                                            L.const_array (array_t numtype (List.length (List.hd smlist))) arrayArray
         in
 
   
@@ -386,7 +382,7 @@ let translate (globals, functions) =
             | S.SExpr e -> ignore (expr builder e); builder
             | S.SReturn e ->
                 ignore(match fdecl.S.styp with
-                    A.Datatype(A.Void)  -> L.build_ret_void builder
+                    A.Void  -> L.build_ret_void builder
                     | _                 -> L.build_ret (expr builder e) builder); builder
             | S.SIf (predicate, then_stmt, else_stmt) ->
                 let bool_val = expr builder predicate in
@@ -427,8 +423,8 @@ let translate (globals, functions) =
         let builder = stmt builder (S.SBlock fdecl.S.sbody) in
 
         add_terminal builder (match fdecl.S.styp with
-            A.Datatype(A.Void) -> L.build_ret_void;
-            | t -> L.build_ret (L.const_int (ltype_of_datatype t) 0))
+            A.Void -> L.build_ret_void;
+            | t -> L.build_ret (L.const_int (ltype_of_typ t) 0))
     in
 
     List.iter build_function_body functions;

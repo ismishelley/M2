@@ -57,7 +57,7 @@ decls:
   | decls fdecl        { fst $1, ($2 :: snd $1) }
 
 fdecl:
-  datatype ID LPAREN formals_opt RPAREN LBRACE vdecl_list stmt_list RBRACE
+  typ ID LPAREN formals_opt RPAREN LBRACE vdecl_list stmt_list RBRACE
     { { typ = $1; 
         fname = $2; 
         formals = $4;
@@ -69,26 +69,23 @@ formals_opt:
   | formal_list   { List.rev $1 }
 
 formal_list:
-    datatype ID                   { [($1,$2)] }
-  | formal_list COMMA datatype ID { ($3, $4) :: $1 }
+    typ ID                   { [($1,$2)] }
+  | formal_list COMMA typ ID { ($3, $4) :: $1 }
 
-datatype:
-  primitives { Datatype($1) }
-
-primitives:
+typ:
     INT                                                                     { Int }
   | FLOAT                                                                   { Float }
   | BOOL                                                                    { Bool }
   | VOID                                                                    { Void }
   | STRING                                                                  { String }
-  | MATRIX primitives LBRACKET NUM_LIT RBRACKET LBRACKET NUM_LIT RBRACKET   { Matrix($2, $4, $7) }
+  | MATRIX typ LBRACKET NUM_LIT RBRACKET LBRACKET NUM_LIT RBRACKET   { Matrix($2, $4, $7) }
 
 vdecl_list:
     /* nothing */    { [] }
   | vdecl_list vdecl { $2 :: $1 }
 
 vdecl:
-    datatype ID SEMI { ($1, $2) }
+    typ ID SEMI { ($1, $2) }
 
 stmt_list:
     /* nothing */  { [] }

@@ -8,28 +8,28 @@ type sexpr =
 	  SNumLit of snum
 	| SBoolLit of bool
 	| SStringLit of string
-	| SMatrixLit of sexpr list list * datatype
-	| SId of string * datatype
-	| SBinop of sexpr * op * sexpr * datatype
-	| SUnop of uop * sexpr * datatype
-	| SAssign of sexpr * sexpr * datatype
-	| SCall of string * sexpr list * datatype
+	| SMatrixLit of sexpr list list * typ
+	| SId of string * typ
+	| SBinop of sexpr * op * sexpr * typ
+	| SUnop of uop * sexpr * typ
+	| SAssign of sexpr * sexpr * typ
+	| SCall of string * sexpr list * typ
 	| SNoexpr
-	| SMatrixAccess of string * sexpr * sexpr * datatype
+	| SMatrixAccess of string * sexpr * sexpr * typ
 	| SRows of int
 	| SCols of int
-	| STranspose of string * datatype
-	| SSubMatrix of string * sexpr * sexpr * sexpr * sexpr * datatype
-	| STrace of string * datatype
+	| STranspose of string * typ
+	| SSubMatrix of string * sexpr * sexpr * sexpr * sexpr * typ
+	| STrace of string * typ
 
 let get_sexpr_type sexpr = match sexpr with
-	SNumLit(SIntLit(_))					-> Datatype(Int)
-	| SNumLit(SFloatLit(_))				-> Datatype(Float)
-	| SBoolLit(_)						-> Datatype(Bool)
-	| SStringLit(_) 					-> Datatype(String)
-	| SNoexpr 							-> Datatype(Void)
-	| SRows(r) 							-> Datatype(Int)
-	| SCols(c) 							-> Datatype(Int)
+	SNumLit(SIntLit(_))					-> Int
+	| SNumLit(SFloatLit(_))				-> Float
+	| SBoolLit(_)						-> Bool
+	| SStringLit(_) 					-> String
+	| SNoexpr 							-> Void
+	| SRows(r) 							-> Int
+	| SCols(c) 							-> Int
 	| STranspose(_,t) 					-> t
 	| SId(_, t) 						-> t
 	| SBinop(_, _, _, t) 				-> t
@@ -41,8 +41,8 @@ let get_sexpr_type sexpr = match sexpr with
 		let c = List.length (List.hd smlist) in
 		let r = List.length smlist in
 		(match t with
-			Datatype(Int) 		-> Datatype(Matrix(Int, IntLit(r), IntLit(c)))
-			| Datatype(Float)	-> Datatype(Matrix(Float, IntLit(r), IntLit(c)))
+			Int 		-> Matrix(Int, IntLit(r), IntLit(c))
+			| Float	-> Matrix(Float, IntLit(r), IntLit(c))
 			| _ 				-> raise(Failure"UnsupportedMatrixType"))
 	| SSubMatrix (_,_,_,_,_,t)  		-> t 
 	| STrace(_,t) 						-> t
@@ -56,7 +56,7 @@ type sstmt =
 	| SReturn of sexpr
 
 type sfunc_decl = {
-	styp 			: datatype;
+	styp 			: typ;
 	sfname 			: string;
 	sformals 		: bind list;
 	slocals  		: bind list;

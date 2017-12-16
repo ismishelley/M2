@@ -8,11 +8,10 @@ type uop = Neg | Not | Inc | Dec
 type num = IntLit of int | FloatLit of float
 
 (* Data Types *)
-type primitives = Int | Float | Bool | Void	| String | Matrix of primitives * num * num
-type datatype = Datatype of primitives
+type typ = Int | Float | Bool | Void	| String | Matrix of typ * num * num
 
 (* Bind *)
-type bind = datatype * string
+type bind = typ * string
 
 (* Expressions *)
 type expr =
@@ -44,7 +43,7 @@ type stmt =
 
 (* Function Declarations *)
 type func_decl = {
-	typ 		: datatype;
+	typ 		: typ;
 	fname 		: string;
 	formals 	: bind list;
 	locals  	: bind list;
@@ -59,16 +58,13 @@ let string_of_num = function
 	IntLit(x) 	  -> string_of_int x
 	| FloatLit(x) -> string_of_float x
 
-let string_of_primitive = function
+let string_of_typ = function
 	Int				-> "int"
 	| Float			-> "float"
 	| Void			-> "void"
 	| Bool			-> "bool"
 	| String		-> "String"
-	| Matrix(p,i,j) -> "matrix(" ^ (string_of_num i) ^ "," ^ (string_of_num j) ^ ")"
-
-let string_of_datatype = function
-    	Datatype(p)		-> (string_of_primitive p)
+	| Matrix(t,r,c) -> "matrix(" ^ (string_of_num r) ^ "," ^ (string_of_num c) ^ ")"
 
 let string_of_op = function
 		Add			-> "+"
@@ -121,10 +117,10 @@ let rec string_of_stmt = function
       string_of_expr e3  ^ ") " ^ string_of_stmt s
   | While(e, s) -> "while (" ^ string_of_expr e ^ ") " ^ string_of_stmt s
 
-let string_of_vdecl (t, id) = string_of_datatype t ^ " " ^ id ^ ";\n"
+let string_of_vdecl (t, id) = string_of_typ t ^ " " ^ id ^ ";\n"
 
 let string_of_fdecl fdecl =
-	string_of_datatype fdecl.typ ^ " " ^
+	string_of_typ fdecl.typ ^ " " ^
   	fdecl.fname ^ "(" ^ String.concat ", " (List.map snd fdecl.formals) ^
   	")\n{\n" ^
   	String.concat "" (List.map string_of_vdecl fdecl.locals) ^
