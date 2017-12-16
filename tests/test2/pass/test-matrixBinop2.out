@@ -1,0 +1,8 @@
+Matrix M is
+0	0	0	
+0	0	0	
+Int a is
+9	
+a * M is
+0	0	0	
+0	0	0	
