@@ -3,46 +3,6 @@ open Sast
 
 module StringMap = Map.Make(String)
 
-let checkEqualType se1 se2 op = function
-		(Datatype(Int),Datatype(Int)) -> SBinop(se1, op, se2, Datatype(Int))
-		| (Datatype(Float), Datatype(Float)) -> SBinop(se1, op, se2, Datatype(Float))
-		| (Datatype(String), Datatype(String)) -> SBinop(se1, op, se2, Datatype(String))
-		| _ -> raise (Failure "Invalid type for equality operators")
-
-let checkLogicalType se1 se2 op = function
-		(Datatype(Bool), Datatype(Bool)) -> SBinop(se1, op, se2, Datatype(Bool))
-		| _ -> raise (Failure "Invalid type for logical operators")
-
-let checkArithmeticType se1 se2 op = function
-		  (Datatype(Int), Datatype(Float)) 
-		| (Datatype(Float), Datatype(Int)) 
-		| (Datatype(Float), Datatype(Float)) 	-> SBinop(se1, op, se2, Datatype(Float))
-		| (Datatype(Int), Datatype(Int)) 		-> SBinop(se1, op, se2, Datatype(Int))
-		| (Datatype(String), Datatype(String)) 	->
-			(match op with
-				Add -> SBinop(se1, op, se2, Datatype(String))
-				| _ -> raise(Failure "Invalid operation on String"))
-		| (Datatype(Matrix(typ1, r1, c1)), Datatype(Matrix(typ2, r2, c2))) ->
-			(match op with
-				Add | Sub 	->
-					if typ1=typ2 && r1=r2 && c1=c2 then
-						SBinop(se1, op, se2, Datatype(Matrix(typ1, r1, c2)))
-					else raise(Failure "Incorrect dimention/type for matrix addition/subtraction")
-				| Mult 		->
-					if typ1=typ2 && c1 = r2 then
-						SBinop(se1, op, se2, Datatype(Matrix(typ1, r1, c2)))
-					else raise(Failure "Incorrect dimention/type for matrix multiplication")
-				| _ -> raise(Failure("Invalid operation on matrix")))
-		| (Datatype(Int), Datatype(Matrix(Int,r,c))) ->
-			(match op with
-				Mult -> SBinop(se1, op, se2, Datatype(Matrix(Int, r, c)))
-				| _ -> raise(Failure "Invalid operation between integer and matrix"))
-		| (Datatype(Float), Datatype(Matrix(Float,r,c))) ->
-			(match op with
-				Mult -> SBinop(se1, op, se2, Datatype(Matrix(Float, r, c)))
-				| _ -> raise(Failure("Invalid operation between float and matrix")))
-		| _ -> raise (Failure("Invalid type for arithmetic operators"))
-
 
 (* top-level checking function *)
 let check (globals, functions) =
@@ -77,8 +37,6 @@ let check (globals, functions) =
   	then raise (Failure ("function printStr may not be defined")) else ();
   	if List.mem "printBool" (List.map (fun fd -> fd.fname) functions)
   	then raise (Failure ("function printBool may not be defined")) else ();
-  	if List.mem "printbig" (List.map (fun fd -> fd.fname) functions)
-  	then raise (Failure ("function printbig may not be defined")) else ();
 
   	(* check for duplicate function names *)
 	report_duplicate (fun n -> "duplicate function " ^ n) (List.map (fun fd -> fd.fname) functions);
@@ -99,7 +57,6 @@ let check (globals, functions) =
 			declare_func "printInt"		(Datatype(Void))	([(Datatype(Int), "int_in")]);
 			declare_func "printFloat"	(Datatype(Void))	([(Datatype(Float), "float_in")]);
 			declare_func "printBool"	(Datatype(Void))	([(Datatype(Bool), "bool_in")]);
-			declare_func "printbig"	    (Datatype(Void))	([(Datatype(Int), "big_in")]);
 	]
 	in 	
 
@@ -139,6 +96,46 @@ let check (globals, functions) =
 		try StringMap.find s symbols
 		with | Not_found -> raise (Failure("Undefined ID " ^ s))
 
+	and check_eq_type se1 se2 op = function
+		(Datatype(Int),Datatype(Int)) -> SBinop(se1, op, se2, Datatype(Int))
+		| (Datatype(Float), Datatype(Float)) -> SBinop(se1, op, se2, Datatype(Float))
+		| (Datatype(String), Datatype(String)) -> SBinop(se1, op, se2, Datatype(String))
+		| _ -> raise (Failure "Invalid type for equality operators")
+
+	and check_log_type se1 se2 op = function
+			(Datatype(Bool), Datatype(Bool)) -> SBinop(se1, op, se2, Datatype(Bool))
+			| _ -> raise (Failure "Invalid type for logical operators")
+
+	and check_arith_type se1 se2 op = function
+			  (Datatype(Int), Datatype(Float)) 
+			| (Datatype(Float), Datatype(Int)) 
+			| (Datatype(Float), Datatype(Float)) 	-> SBinop(se1, op, se2, Datatype(Float))
+			| (Datatype(Int), Datatype(Int)) 		-> SBinop(se1, op, se2, Datatype(Int))
+			| (Datatype(String), Datatype(String)) 	->
+				(match op with
+					Add -> SBinop(se1, op, se2, Datatype(String))
+					| _ -> raise(Failure "Invalid operation on String"))
+			| (Datatype(Matrix(typ1, r1, c1)), Datatype(Matrix(typ2, r2, c2))) ->
+				(match op with
+					Add | Sub 	->
+						if typ1=typ2 && r1=r2 && c1=c2 then
+							SBinop(se1, op, se2, Datatype(Matrix(typ1, r1, c2)))
+						else raise(Failure "Incorrect dimention/type for matrix addition/subtraction")
+					| Mult 		->
+						if typ1=typ2 && c1 = r2 then
+							SBinop(se1, op, se2, Datatype(Matrix(typ1, r1, c2)))
+						else raise(Failure "Incorrect dimention/type for matrix multiplication")
+					| _ -> raise(Failure("Invalid operation on matrix")))
+			| (Datatype(Int), Datatype(Matrix(Int,r,c))) ->
+				(match op with
+					Mult -> SBinop(se1, op, se2, Datatype(Matrix(Int, r, c)))
+					| _ -> raise(Failure "Invalid operation between integer and matrix"))
+			| (Datatype(Float), Datatype(Matrix(Float,r,c))) ->
+				(match op with
+					Mult -> SBinop(se1, op, se2, Datatype(Matrix(Float, r, c)))
+					| _ -> raise(Failure("Invalid operation between float and matrix")))
+			| _ -> raise (Failure("Invalid type for arithmetic operators"))
+
 	and check_expr_is_int symbols e = match e with
 		NumLit(IntLit(n)) -> Datatype(Int)
 		| Id(s) 			-> type_of_identifier s symbols
@@ -158,8 +155,16 @@ let check (globals, functions) =
 		| BoolLit(b)       			-> SBoolLit(b)
 		| StringLit(s)        		-> SStringLit(s)
 		| Id(s)                		-> SId(s, type_of_identifier s symbols)
-		| Null                 		-> SNull
-		| Noexpr               		-> SNoexpr
+		| Binop(e1, op, e2)			-> 	let se1 = sexpr symbols e1 in
+										let se2 = sexpr symbols e2 in
+										let type1 = Sast.get_sexpr_type se1 in
+										let type2 = Sast.get_sexpr_type se2 in
+											(match op with
+											Equal | Neq -> check_eq_type se1 se2 op (type1, type2)
+											| And | Or -> check_log_type se1 se2 op (type1, type2)
+											| Less | Leq | Greater | Geq when type1 = type2 && (type1 = Datatype(Int) || type1 = Datatype(Float)) -> SBinop(se1, op, se2, type1)
+											| Add | Mult | Sub | Div -> check_arith_type se1 se2 op (type1, type2)
+											| _ -> raise (Failure "Invalid binary operator"))
 		| Unop(op, e)          		-> let se = sexpr symbols e in
 										let typ = Sast.get_sexpr_type se in
 										(match op with
@@ -179,21 +184,13 @@ let check (globals, functions) =
 											(if type1 = type2
 												then SAssign(se1, se2, type1)
 											else raise(Failure "Mismatched assignment type"))
-		| Binop(e1, op, e2)			-> 	let se1 = sexpr symbols e1 in
-										let se2 = sexpr symbols e2 in
-										let type1 = Sast.get_sexpr_type se1 in
-										let type2 = Sast.get_sexpr_type se2 in
-											(match op with
-											Equal | Neq -> checkEqualType se1 se2 op (type1, type2)
-											| And | Or -> checkLogicalType se1 se2 op (type1, type2)
-											| Less | Leq | Greater | Geq when type1 = type2 && (type1 = Datatype(Int) || type1 = Datatype(Float)) -> SBinop(se1, op, se2, type1)
-											| Add | Mult | Sub | Div -> checkArithmeticType se1 se2 op (type1, type2)
-											| _ -> raise (Failure "Invalid binary operator"))
+		
 		| Call(fname, actuals)		-> let fd = function_decl fname in
 										if List.length actuals != List.length fd.formals then
 											raise (Failure "Incorrect number of arguments")
 								 		else
 								 			SCall(fname, List.map (sexpr symbols) actuals, fd.typ)
+		| Noexpr               		-> SNoexpr
 		| MatrixAccess(s, dim1, dim2)	-> 	ignore(check_expr_is_int symbols dim1);
 											ignore(check_expr_is_int symbols dim2);
 											let typ = type_of_identifier s symbols	in
@@ -202,16 +199,16 @@ let check (globals, functions) =
 														SMatrixAccess(s, sexpr symbols dim1, sexpr symbols dim2, Datatype(d))
 													| _ -> raise(Failure "Cannot operate on nonmatrix")	)
 		| MatrixLit(mlist)			-> let smlist = (List.map (fun l -> (List.map lit_to_slit l)) mlist) in
-										let first = List.hd (List.hd mlist) in
-										let first_size = List.length (List.hd mlist) in
-											ignore(List.iter (fun nl -> if (List.length nl = first_size) then () else raise(Failure "Rows of matrix must have the same size")) mlist);
-										let first_typ = typ_of_lit first in
+										let entry = List.hd (List.hd mlist) in
+										let row_size = List.length (List.hd mlist) in
+											ignore(List.iter (fun nl -> if (List.length nl = row_size) then () else raise(Failure "Rows of matrix must have the same size")) mlist);
+										let entry_typ = typ_of_lit entry in
 											ignore(List.iter (fun nl -> List.iter (fun n ->
 												(let typ = typ_of_lit n in
-													if (typ = first_typ)
+													if (typ = entry_typ)
 														then ()
 														else raise(Failure "More than one datatype in a matrix" ))) nl) mlist);
-										SMatrixLit(smlist, first_typ)
+										SMatrixLit(smlist, entry_typ)
 		| Rows(s)					-> let typ = type_of_identifier s symbols in
 											(match typ with
 												Datatype(Matrix(_, r, _)) -> 
@@ -265,7 +262,6 @@ let check (globals, functions) =
 
 	and stmt_list_to_sstmt_list symbols stmt_list = List.map (sstmt symbols) stmt_list
 	in
-
 
 	let func_to_sfunc func =
 		{

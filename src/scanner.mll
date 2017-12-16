@@ -72,7 +72,6 @@ rule token = parse
 	| ['0'-'9']+ '.' ['0'-'9']+ as lxm { NUM_LIT(Ast.FloatLit(float_of_string lxm)) }
 	| '"' (([^ '"'] | "\\\"")* as str) '"' { STRING_LIT(str) }
 	| ['a'-'z' 'A'-'Z']['a'-'z' 'A'-'Z' '0'-'9' '_']* as lxm { ID(lxm) }
-	| "null" { NULL }
 	| eof { EOF }
 	| _ as char { raise (Failure("illegal character " ^ Char.escaped char)) }
 

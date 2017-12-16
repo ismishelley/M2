@@ -29,7 +29,6 @@
 %token <Ast.num> NUM_LIT
 %token <string> STRING_LIT
 %token <string> ID
-%token NULL
 %token EOF
 
 /* Precedence and associativity of each operator */
@@ -59,8 +58,11 @@ decls:
 
 fdecl:
   datatype ID LPAREN formals_opt RPAREN LBRACE vdecl_list stmt_list RBRACE
-    { { typ = $1; fname = $2; formals = $4;
-      locals = List.rev $7; body = List.rev $8 } }
+    { { typ = $1; 
+        fname = $2; 
+        formals = $4;
+        locals = List.rev $7; 
+        body = List.rev $8 } }
 
 formals_opt:
     /* nothing */ { [] }
@@ -111,7 +113,6 @@ expr:
   | STRING_LIT                                                  { StringLit($1) }
   | TRUE                                                        { BoolLit(true) }
   | FALSE                                                       { BoolLit(false) }
-  | NULL                                                        { Null }
   | ID                                                          { Id($1) }
   | expr PLUS expr                                              { Binop($1, Add, $3) }
   | expr MINUS expr                                             { Binop($1, Sub, $3) }
@@ -130,15 +131,15 @@ expr:
   | INC expr                                                    { Unop(Inc, $2) }
   | DEC expr                                                    { Unop(Dec, $2) }
   | expr ASSIGN expr                                            { Assign($1, $3) }
-  | LPAREN expr RPAREN                                          { $2 }
   | ID LPAREN actuals_opt RPAREN                                { Call($1, $3) }
+  | LPAREN expr RPAREN                                          { $2 }
   | LBRACKET mat_lit RBRACKET                                   { MatrixLit($2) }
-  | ID LBRACKET expr COMMA expr RBRACKET                        { MatrixAccess($1, $3, $5) }
+  | ID LBRACKET expr RBRACKET LBRACKET expr RBRACKET            { MatrixAccess($1, $3, $6) }
   | ID COLON ROWS                                               { Rows($1) }
   | ID COLON COLS                                               { Cols($1) }
   | ID COLON TRANSPOSE                                          { Transpose($1) }
   | ID COLON TRACE                                              { Trace($1) }
-  | ID COLON SUBMATRIX expr expr expr expr                      { SubMatrix($1, $4, $5, $6, $7) }
+  | ID COLON SUBMATRIX LBRACKET expr COMMA expr COMMA expr COMMA expr RBRACKET { SubMatrix($1, $5, $7, $9, $11) }
 
 actuals_opt:
     /* nothing */                   { [] }
