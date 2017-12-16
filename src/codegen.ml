@@ -1,23 +1,21 @@
 open Llvm
 open Ast
 open Sast
-open Semant
 module L = Llvm
 module A = Ast
 module S = Sast
 
 module StringMap = Map.Make(String)
 
-let translate(globals, functions) =
+let translate (globals, functions) =
 
     let context = L.global_context() in
     let the_module = L.create_module context "M2"
-
     and i32_t     = L.i32_type context
-    and i1_t      = L.i1_type context
     and i8_t      = L.i8_type context
-    and float_t   = L.double_type context
+    and i1_t      = L.i1_type context
     and void_t    = L.void_type context
+    and float_t   = L.double_type context
     and array_t   = L.array_type
     and pointer_t = L.pointer_type
     in
@@ -28,13 +26,15 @@ let translate(globals, functions) =
         | A.Bool    -> i1_t
         | A.Void    -> void_t
         | A.String  -> pointer_t i8_t
-        | A.Matrix(typ, rows, cols) ->
-            let rows' = match rows with IntLit(s) -> s | _ -> raise(Failure"InvalidMatrixDimension") in
-            let cols' = match cols with IntLit(s) -> s | _ -> raise(Failure"InvalidMatrixDimension") in
-            (match typ with
-                A.Int      -> array_t (array_t i32_t cols') rows'
-                | A.Float  -> array_t (array_t float_t cols') rows'
-                | _ -> raise(Failure"UnsupportedMatrixType"))
+        | A.Matrix(t, r, c) ->
+            let rows = match r with IntLit(s) -> s 
+                                    | _ -> raise(Failure"Integer required for matrix dimension") in
+            let cols = match c with IntLit(s) -> s 
+                                    | _ -> raise(Failure"Integer required for matrix dimension") in
+            (match t with
+                A.Int      -> array_t (array_t i32_t cols) rows
+                | A.Float  -> array_t (array_t float_t cols) rows
+                | _ -> raise(Failure"Invalid datatype for matrix"))
     in
 
     let ltype_of_datatype = function
@@ -43,16 +43,14 @@ let translate(globals, functions) =
 
     let global_vars =
         let global_var m (t,n) =
-            let init = L.const_int (ltype_of_datatype t) 0 in
-                StringMap.add n (L.define_global n init the_module) m in
-                    List.fold_left global_var StringMap.empty globals
+        let init = L.const_int (ltype_of_datatype t) 0
+        in  StringMap.add n (L.define_global n init the_module) m in
+        List.fold_left global_var StringMap.empty globals in
+
+    let printf_t = L.var_arg_function_type i32_t [| L.pointer_type i8_t |] 
     in
 
-    let printf_t =
-        L.var_arg_function_type i32_t [| L.pointer_type i8_t |]
-    in
-    let printf_func =
-        L.declare_function "printf" printf_t the_module
+    let printf_func = L.declare_function "printf" printf_t the_module 
     in
 
     let function_decls =
@@ -67,10 +65,7 @@ let translate(globals, functions) =
     in
 
     let build_function_body fdecl =
-
         let (the_function, _) = StringMap.find fdecl.S.sfname function_decls in
-
-        (* Create an instruction builder *)
         let builder = L.builder_at_end context (L.entry_block the_function) in
 
         let int_format_str = L.build_global_stringptr "%d\t" "fmt" builder
@@ -109,18 +104,7 @@ let translate(globals, functions) =
             | S.SNumLit(SFloatLit(f))  -> L.const_float float_t f
             | S.SBoolLit b             -> L.const_int i1_t (if b then 1 else 0)
             | S.SStringLit s           -> L.build_global_stringptr s "tmp" builder
-            | S.SNoexpr                -> L.const_int i32_t 0
             | S.SId (s, d)             -> L.build_load (lookup s) s builder
-            | S.SAssign (se1, se2, d)  ->
-                let se1' =
-                    (match se1 with
-                        S.SId(s,_) -> (lookup s)
-                        | S.SMatrixAccess(s, i1, j1, d) ->
-                            let i = expr builder i1 and j = expr builder j1 in
-                                build_matrix_access s i j builder true
-                        | _ -> raise(Failure"AssignLHSMustBeAssignable"))
-                and se2' = expr builder se2 in
-                ignore (L.build_store se2' se1' builder); se2'
             | S.SBinop (op1, op, op2, d)  ->
                 let type1 = Sast.get_sexpr_type op1 in
                 let type2 = Sast.get_sexpr_type op2 in
@@ -210,7 +194,7 @@ let translate(globals, functions) =
                                             done;
                                             L.build_load (L.build_gep tmp_m [| L.const_int i32_t 0 |] "tmpmat" builder) "tmpmat" builder
                                         
-                                        | Datatype(Matrix(Int,r1,c1)) | Datatype(Matrix(Float,r1,c1)) ->
+                                        | Datatype(Matrix(Int,r1,c1)) ->
                                             let tmp_s = L.build_alloca operator_type "tmpsum" builder in
                                             let c1_i = (match c1 with IntLit(n) -> n | _ -> -1) in
                                             ignore(L.build_store (operator_type2 operator_type 0) tmp_s builder);
@@ -228,7 +212,26 @@ let translate(globals, functions) =
                                                 done
                                             done;
                                             L.build_load (L.build_gep tmp_m [| L.const_int i32_t 0 |] "tmpmat" builder) "tmpmat" builder
+                                        | Datatype(Matrix(Float,r1,c1)) ->
+                                            let tmp_s = L.build_alloca float_t "tmpsum" builder in
+                                                let c1_i = (match c1 with IntLit(n) -> n | _ -> -1) in
+                                                ignore(L.build_store (L.const_float float_t 0.0) tmp_s builder);
+                                                for i=0 to (rDimension-1) do
+                                                    for j=0 to (cDimension-1) do
+                                                        ignore(L.build_store (L.const_float float_t 0.0) tmp_s builder);
+                                                        for k=0 to (c1_i-1) do
+                                                            let m1 = build_matrix_access lhs_str (L.const_int i32_t i) (L.const_int i32_t k) builder false in
+                                                            let m2 = build_matrix_access rhs_str (L.const_int i32_t k) (L.const_int i32_t j) builder false in
+                                                            let mult_res = L.build_fmul m1 m2 "tmp" builder in
+                                                            ignore(L.build_store (L.build_fadd mult_res (L.build_load tmp_s "addtmp" builder) "tmp" builder) tmp_s builder);
+                                                        done;
+                                                        let ld = L.build_gep tmp_m [| L.const_int i32_t 0; L.const_int i32_t i; L.const_int i32_t j |] "tmpmat" builder in
+                                                        ignore(build_store (L.build_load tmp_s "restmp" builder) ld builder);
+                                                    done
+                                                done;
+                                                L.build_load (L.build_gep tmp_m [| L.const_int i32_t 0 |] "tmpmat" builder) "tmpmat" builder
                                         | _ -> L.const_int i32_t 0)
+
                                 | _         -> raise(Failure "Invalid Matrix Binop"))
                 in
 
@@ -271,6 +274,33 @@ let translate(globals, functions) =
                         A.Not   -> L.build_not e' "tmp" builder
                         | _       -> raise(Failure"IllegalBoolUnop"))
                 | _ -> (raise(Failure"InvalidUnopType")))
+            | S.SAssign (se1, se2, d)  ->
+                let se1' =
+                    (match se1 with
+                        S.SId(s,_) -> (lookup s)
+                        | S.SMatrixAccess(s, i1, j1, d) ->
+                            let i = expr builder i1 and j = expr builder j1 in
+                                build_matrix_access s i j builder true
+                        | _ -> raise(Failure"AssignLHSMustBeAssignable"))
+                and se2' = expr builder se2 in
+                ignore (L.build_store se2' se1' builder); se2'    
+            | S.SCall ("printStr", [e], d) ->
+                L.build_call printf_func [| string_format_str ; (expr builder e) |] "printf" builder
+            | S.SCall ("printInt", [e], d) ->
+                L.build_call printf_func [| int_format_str ; (expr builder e) |] "printf" builder
+            | S.SCall ("printBool", [e], d) ->
+                L.build_call printf_func [| int_format_str ; (expr builder e) |] "printf" builder    
+            | S.SCall ("printFloat", [e], d) ->
+                L.build_call printf_func [| float_format_str ; (expr builder e) |] "printf" builder
+            | S.SCall (f, act, d) ->
+                let (fdef, fdecl) = StringMap.find f function_decls in
+                let actuals = List.rev (List.map (expr builder) (List.rev act)) in
+                let result =
+                    (match fdecl.S.styp with
+                        A.Datatype(A.Void) -> ""
+                        | _ -> f ^ "_result") in
+                L.build_call fdef (Array.of_list actuals) result builder
+            | S.SNoexpr                -> L.const_int i32_t 0
             | S.SRows(r)                -> L.const_int i32_t r
             | S.SCols(c)                -> L.const_int i32_t c
             | S.STranspose(s,d)         ->
@@ -289,7 +319,6 @@ let translate(globals, functions) =
                         L.build_load (L.build_gep tmp_tr [| L.const_int i32_t 0 |] "tmpmat" builder) "tmpmat" builder
                     | _ -> const_int i32_t 0)
             | S.SSubMatrix(s, r1, r2, c1, c2, d) ->
-                (* L.const_int i32_t 1 *)
                 (let alloctype = match d with
                     Datatype(Matrix(Int, c, r)) -> i32_t | Datatype(Matrix(Float, c, r)) -> float_t| _ -> i32_t in
                     match d with Datatype(Matrix(Int, c, r))| Datatype(Matrix(Float, c, r)) ->
@@ -330,37 +359,19 @@ let translate(globals, functions) =
                         done;
                         L.build_load tmp_s "restmp" builder
                     | _ -> raise(Failure "Cannot calculate trace!"))
-            | S.SCall ("printStr", [e], d) ->
-                L.build_call printf_func [| string_format_str ; (expr builder e) |] "printf" builder
-            | S.SCall ("printInt", [e], d) ->
-                L.build_call printf_func [| int_format_str ; (expr builder e) |] "printf" builder
-            | S.SCall ("printBool", [e], d) ->
-                L.build_call printf_func [| int_format_str ; (expr builder e) |] "printf" builder    
-            | S.SCall ("printFloat", [e], d) ->
-                L.build_call printf_func [| float_format_str ; (expr builder e) |] "printf" builder
-            | S.SCall (f, act, d) ->
-                let (fdef, fdecl) = StringMap.find f function_decls in
-                let actuals = List.rev (List.map (expr builder) (List.rev act)) in
-                let result =
-                    (match fdecl.S.styp with
-                        A.Datatype(A.Void) -> ""
-                        | _ -> f ^ "_result") in
-                L.build_call fdef (Array.of_list actuals) result builder
-            | S.SNull                   -> L.const_null i32_t
             | S.SMatrixAccess (s, se1, se2, d) ->
                 let i = expr builder se1 and j = expr builder se2 in
                     (build_matrix_access s i j builder false)
             | S.SMatrixLit (sll, d) -> let numtype = match d with A.Datatype(A.Float) -> float_t
-            | A.Datatype(A.Int) -> i32_t
-            | _ -> i32_t
-             in
-                let flipped = List.map List.rev sll in
-                let lists        = List.map (List.map (expr builder)) flipped in
-                let listArray    = List.map Array.of_list lists in
-                let listArray2 = List.rev (List.map (L.const_array numtype) listArray) in
-                let arrayArray   = Array.of_list listArray2 in
-                L.const_array (array_t numtype (List.length (List.hd sll))) arrayArray
-
+                                                                | A.Datatype(A.Int) -> i32_t
+                                                                | _ -> i32_t
+                                         in
+                                            let flipped = List.map List.rev sll in
+                                            let lists        = List.map (List.map (expr builder)) flipped in
+                                            let listArray    = List.map Array.of_list lists in
+                                            let listArray2 = List.rev (List.map (L.const_array numtype) listArray) in
+                                            let arrayArray   = Array.of_list listArray2 in
+                                            L.const_array (array_t numtype (List.length (List.hd sll))) arrayArray
         in
 
   
@@ -413,15 +424,12 @@ let translate(globals, functions) =
                         S.SExpr e3]) ])
         in
 
-        (* Build the code for each statement in the function *)
         let builder = stmt builder (S.SBlock fdecl.S.sbody) in
 
-        (* Add a return if the last block falls off the end *)
-        add_terminal builder
-            (match fdecl.S.styp with
-                A.Datatype(A.Void) -> L.build_ret_void;
-                | t -> L.build_ret (L.const_int (ltype_of_datatype t) 0))
+        add_terminal builder (match fdecl.S.styp with
+            A.Datatype(A.Void) -> L.build_ret_void;
+            | t -> L.build_ret (L.const_int (ltype_of_datatype t) 0))
     in
-    List.iter build_function_body functions;
 
-    the_module (*returned as a module to whatever called this*)
+    List.iter build_function_body functions;
+    the_module
