@@ -4,7 +4,7 @@ type op = Add | Sub | Mult | Div | Equal | Neq | Less | Leq | Greater | Geq | An
 (* Unary Operators *)
 type uop = Neg | Not | Inc | Dec
 
-(* Nums *)
+(* Num *)
 type num = IntLit of int | FloatLit of float
 
 (* Data Types *)
@@ -50,6 +50,7 @@ type func_decl = {
 	body 		: stmt list;
 }
 
+(* Program *)
 type program = bind list * func_decl list
 
 

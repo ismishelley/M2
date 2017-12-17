@@ -1,1 +1,1 @@
-Fatal error: exception Failure("Invalid type for equality operators")
+Fatal error: exception Failure("Illegal type for equality operators")
