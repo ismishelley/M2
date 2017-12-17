@@ -107,7 +107,7 @@ let translate (globals, functions) =
                 let se1' = expr builder se1
                 and se2' = expr builder se2 in
 
-                let int_bops op se1' se2' =
+                let int_binop op se1' se2' =
                     (match op with
                         A.Add     -> L.build_add 
                         | A.Sub     -> L.build_sub 
@@ -123,7 +123,7 @@ let translate (globals, functions) =
                         | A.Or      -> L.build_or) se1' se2' "tmp" builder
                 in
 
-                let float_bops op se1' se2' =
+                let float_binop op se1' se2' =
                     (match op with
                         A.Add       -> L.build_fadd 
                         | A.Sub       -> L.build_fsub
@@ -137,13 +137,13 @@ let translate (globals, functions) =
                         | A.Geq       -> L.build_fcmp L.Fcmp.Oge) se1' se2' "tmp" builder
                 in
 
-                let bool_bops op se1' se2' =
+                let bool_binop op se1' se2' =
                     (match op with
                         | A.And   -> L.build_and
                         | A.Or    -> L.build_or ) se1' se2' "tmp" builder
                 in
 
-                let matrix_bops mtype rDimension cDimension op se1 se2 =
+                let matrix_binop mtype rDimension cDimension op se1 se2 =
                     let lhs_str = (match se1 with SId(s,_) -> s | _ -> "") in
                     let rhs_str = (match se2 with SId(s,_) -> s | _ -> "") in
                     let operator_type = match mtype with
@@ -229,29 +229,29 @@ let translate (globals, functions) =
                                 | _         -> raise(Failure "Invalid Matrix Binop"))
                 in
 
-                let cast operand1 operand2 type1 type2 =
+                let build_binop operand1 operand2 type1 type2 =
                     match (type1, type2) with
-                        (Int, Int)          ->  int_bops op operand1 operand2
-                        | (Float, Float)    ->  float_bops op operand1 operand2
-                        | (Bool, Bool)      ->  bool_bops op operand1 operand2
+                        (Int, Int)          ->  int_binop op operand1 operand2
+                        | (Float, Float)    ->  float_binop op operand1 operand2
+                        | (Bool, Bool)      ->  bool_binop op operand1 operand2
                         | (Int, Matrix(Int,r1,c2)) -> let rDimension = (match r1 with IntLit(n) -> n | _ -> -1)
                                 and cDimension = (match c2 with IntLit(n) -> n | _ -> -1) in
-                                    matrix_bops "int" rDimension cDimension op se1 se2  
+                                    matrix_binop "int" rDimension cDimension op se1 se2  
                         | (Float, Matrix(Float,r1,c2)) ->
                             let rDimension = (match r1 with IntLit(n) -> n | _ -> -1)
                                 and cDimension = (match c2 with IntLit(n) -> n | _ -> -1) in
-                                    matrix_bops "float" rDimension cDimension op se1 se2  
+                                    matrix_binop "float" rDimension cDimension op se1 se2  
                         | (Matrix(Int,r1,c1), Matrix(Int,r2,c2)) ->
                             let rDimension = (match r1 with IntLit(n) -> n | _ -> -1)
                                 and cDimension = (match c2 with IntLit(n) -> n | _ -> -1) in
-                                    matrix_bops "int" rDimension cDimension op se1 se2  
+                                    matrix_binop "int" rDimension cDimension op se1 se2  
                         | (Matrix(Float,r1,c1), Matrix(Float,r2,c2)) ->
                             let rDimension = (match r1 with IntLit(n) -> n | _ -> -1)
                                 and cDimension = (match c2 with IntLit(n) -> n | _ -> -1) in
-                                    matrix_bops "float" rDimension cDimension op se1 se2  
+                                    matrix_binop "float" rDimension cDimension op se1 se2  
                         | _                                 -> raise(Failure"IllegalCast")
                 in
-                cast se1' se2' type1 type2
+                build_binop se1' se2' type1 type2
 
             | S.SUnop(op, e, d)         ->
                 let e' = expr builder e in 
@@ -295,6 +295,19 @@ let translate (globals, functions) =
                         | _ -> f ^ "_result") in
                 L.build_call fdef (Array.of_list actuals) result builder
             | S.SNoexpr                -> L.const_int i32_t 0
+            | S.SMatrixAccess (s, se1, se2, d) ->
+                let i = expr builder se1 and j = expr builder se2 in
+                    (build_matrix_access s i j builder false)
+            | S.SMatrixLit (smlist, d) -> let numtype = match d with A.Float -> float_t
+                                                                | A.Int -> i32_t
+                                                                | _ -> i32_t
+                                         in
+                                            let flipped = List.map List.rev smlist in
+                                            let lists        = List.map (List.map (expr builder)) flipped in
+                                            let listArray    = List.map Array.of_list lists in
+                                            let listArray2 = List.rev (List.map (L.const_array numtype) listArray) in
+                                            let arrayArray   = Array.of_list listArray2 in
+                                            L.const_array (array_t numtype (List.length (List.hd smlist))) arrayArray
             | S.SRows(r)                -> L.const_int i32_t r
             | S.SCols(c)                -> L.const_int i32_t c
             | S.STranspose(s,d)         -> 
@@ -360,19 +373,7 @@ let translate (globals, functions) =
                         done;
                         L.build_load tmp_s "restmp" builder
                     | _ -> raise(Failure "Cannot calculate trace!"))
-            | S.SMatrixAccess (s, se1, se2, d) ->
-                let i = expr builder se1 and j = expr builder se2 in
-                    (build_matrix_access s i j builder false)
-            | S.SMatrixLit (smlist, d) -> let numtype = match d with A.Float -> float_t
-                                                                | A.Int -> i32_t
-                                                                | _ -> i32_t
-                                         in
-                                            let flipped = List.map List.rev smlist in
-                                            let lists        = List.map (List.map (expr builder)) flipped in
-                                            let listArray    = List.map Array.of_list lists in
-                                            let listArray2 = List.rev (List.map (L.const_array numtype) listArray) in
-                                            let arrayArray   = Array.of_list listArray2 in
-                                            L.const_array (array_t numtype (List.length (List.hd smlist))) arrayArray
+    
         in
 
   
