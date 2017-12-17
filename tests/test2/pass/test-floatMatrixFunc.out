@@ -1,0 +1,17 @@
+Matrix m is
+1.000000	1.000000	
+0.000000	2.000000	
+Rows of m
+2	
+Columns of m
+2	
+Transpose of m
+1.000000	0.000000	
+1.000000	2.000000	
+Trace of m
+3.000000	
+Submatrix (0,1,0,1) of m
+1.000000	
+Submatrix (0,1,0,1) of m
+1.000000	1.000000	
+0.000000	2.000000	
