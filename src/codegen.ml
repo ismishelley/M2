@@ -299,12 +299,14 @@ let translate (globals, functions) =
             | S.SNoexpr                -> L.const_int i32_t 0
             | S.SRows(r)                -> L.const_int i32_t r
             | S.SCols(c)                -> L.const_int i32_t c
-            | S.STranspose(s,d)         ->
+            | S.STranspose(s,d)         -> 
+                let alloctype = match d with
+                    Matrix(Int, c, r) -> i32_t | Matrix(Float, c, r) -> float_t| _ -> i32_t in
                 (match d with
-                    Matrix(Int, c, r) ->
+                    Matrix(Int, c, r) | Matrix(Float, c, r) ->
                         let r_tr = (match c with IntLit(n) -> n | _ -> -1) in
                         let c_tr = (match r with IntLit(n) -> n | _ -> -1) in
-                        let tmp_tr = L.build_alloca (array_t (array_t i32_t c_tr) r_tr) "tmpmat" builder in
+                        let tmp_tr = L.build_alloca (array_t (array_t alloctype c_tr) r_tr) "tmpmat" builder in
                         for i=0 to (r_tr-1) do
                             for j=0 to (c_tr-1) do
                                 let mtr = build_matrix_access s (L.const_int i32_t i) (L.const_int i32_t j) builder false in
@@ -343,12 +345,17 @@ let translate (globals, functions) =
                     | Matrix(Float, c, r) -> L.build_fadd
                     | _ -> L.build_add 
                 in
+                let initial_val = match d with 
+                    Matrix(Int, c, r) -> L.const_int i32_t 0
+                    | Matrix(Float, c, r) -> L.const_float float_t 0.0
+                    | _ -> L.const_int i32_t 0
+                in
                 match d with
                     Matrix(Int, c, r)
                     | Matrix(Float, c, r) ->
                         let c_tr = (match c with IntLit(n) -> n | _ -> -1) in
                         let tmp_s = L.build_alloca alloctype "tmpsum" builder in
-                        ignore(L.build_store (L.const_int i32_t 0) tmp_s builder);
+                        ignore(L.build_store initial_val tmp_s builder);
                         for i=0 to (c_tr-1) do
                                 let mult_res = build_matrix_access s (L.const_int i32_t i) (L.const_int i32_t i) builder false in
                                 ignore(L.build_store (buildtype mult_res (L.build_load tmp_s "addtmp" builder) "tmp" builder) tmp_s builder);
