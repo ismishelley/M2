@@ -4,10 +4,9 @@ open Sast
 module StringMap = Map.Make(String)
 
 
-(* top-level checking function *)
 let check (globals, functions) =
 
-	(* Function for checking duplicates *)
+	(* Checking duplicates *)
 	let report_duplicate exceptf list =
 		let rec helper = function
 			n1 :: n2 :: _ when n1 = n2 -> raise (Failure (exceptf n1))
@@ -16,7 +15,7 @@ let check (globals, functions) =
 		in helper (List.sort compare list)
 	in
 
-	(* Function for checking void type in binding *)
+	(* Checking void type in binding *)
 	let check_not_void exceptf = function
 	      (Void, n) -> raise (Failure (exceptf n))
 	    | _ -> ()
@@ -28,7 +27,7 @@ let check (globals, functions) =
 	report_duplicate (fun n -> "duplicate global " ^ n) (List.map snd globals);
 	
 
-	(**** Checking Functions ****)
+	(**** Checking User-defined Functions. Cannot define built-in functions.  ****)
 	if List.mem "printInt" (List.map (fun fd -> fd.fname) functions)
   	then raise (Failure ("function printInt may not be defined")) else ();
   	if List.mem "printFloat" (List.map (fun fd -> fd.fname) functions)
@@ -38,33 +37,45 @@ let check (globals, functions) =
   	if List.mem "printBool" (List.map (fun fd -> fd.fname) functions)
   	then raise (Failure ("function printBool may not be defined")) else ();
 
-  	(* check for duplicate function names *)
+  	(* Checking duplicate function names *)
 	report_duplicate (fun n -> "duplicate function " ^ n) (List.map (fun fd -> fd.fname) functions);
 
-	(* add built-in print functions *)
-	let declare_func name return_type formals =
-			{
-				typ	= return_type;
-				fname 		= name;
-				formals 	= formals;
-				locals		= [];
-				body 		= [];
-			} 
+	(* Add built-in print functions *)
+	let built_in_decls = [{
+			typ			= Void;
+			fname 		= "printInt";
+			formals 	= [(Int, "i")];
+			locals		= [];
+			body 		= [];
+		};
+		{
+			typ			= Void;
+			fname 		= "printFloat";
+			formals 	= [(Float, "f")];
+			locals		= [];
+			body 		= [];
+		};
+		{
+			typ			= Void;
+			fname 		= "printStr";
+			formals 	= [(String, "s")];
+			locals		= [];
+			body 		= [];
+		};
+		{
+			typ			= Void;
+			fname 		= "printBool";
+			formals 	= [(Bool, "b")];
+			locals		= [];
+			body 		= [];
+		}]
 	in
-	
-	let built_in_decls = [
-			declare_func "printStr" 	(Void) 	([(String, "string_in")]);
-			declare_func "printInt"		(Void)	([(Int, "int_in")]);
-			declare_func "printFloat"	(Void)	([(Float, "float_in")]);
-			declare_func "printBool"	(Void)	([(Bool, "bool_in")]);
-	]
-	in 	
 
 	let function_decls = List.fold_left
 			(fun m fd -> StringMap.add fd.fname fd m) StringMap.empty (functions @ built_in_decls)
 	in
 
-	(* check if s is the name of a declared function *)
+	(* Checking if s a declared function *)
 	let function_decl s =
 		try StringMap.find s function_decls
 		with Not_found -> raise (Failure "Unrecognized function")
@@ -72,15 +83,15 @@ let check (globals, functions) =
 
 	let _ = function_decl "main" in
 
-	(* several checks on a single function declaration *)
+	(* Several checks on a single function *)
 	let check_function func =
-		(* check void/duplicate for formals and locals *)
+		(* Check void/duplicate for formals and locals *)
 		List.iter (check_not_void (fun n -> "illegal void formal " ^ n ^ " in " ^ func.fname)) func.formals;
     	List.iter (check_not_void (fun n -> "illegal void local " ^ n ^ " in " ^ func.fname)) func.locals;
 		report_duplicate (fun n -> "duplicate formal " ^ n ^ " in " ^ func.fname) (List.map snd func.formals);
     	report_duplicate (fun n -> "duplicate local " ^ n ^ " in " ^ func.fname) (List.map snd func.locals);
 
-		(* check for duplicate variables *)
+		(* Check for duplicate variables *)
 		ignore(report_duplicate (fun n -> "duplicate global variable " ^ n) (List.map snd globals));
 		ignore(report_duplicate (fun n -> "duplicate formal variable " ^ n) (List.map snd func.formals));
 		ignore(report_duplicate (fun n -> "duplicate local variable " ^ n) (List.map snd func.locals));
@@ -100,11 +111,11 @@ let check (globals, functions) =
 		(Int, Int) -> SBinop(se1, op, se2, Int)
 		| (Float, Float) -> SBinop(se1, op, se2, Float)
 		| (String, String) -> SBinop(se1, op, se2, String)
-		| _ -> raise (Failure "Invalid type for equality operators")
+		| _ -> raise (Failure "Illegal type for equality operators")
 
 	and check_log_type se1 se2 op = function
 			(Bool, Bool) -> SBinop(se1, op, se2, Bool)
-			| _ -> raise (Failure "Invalid type for logical operators")
+			| _ -> raise (Failure "Illegal type for logical operators")
 
 	and check_arith_type se1 se2 op = function
 			  (Int, Float) 
@@ -136,17 +147,17 @@ let check (globals, functions) =
 					| _ -> raise(Failure("Invalid operation between float and matrix")))
 			| _ -> raise (Failure("Invalid type for arithmetic operators"))
 
-	and check_expr_is_int symbols e = match e with
-		NumLit(IntLit(n)) -> Int
+	and check_is_int symbols e = match e with
+		NumLit(IntLit(n)) 	-> Int
 		| Id(s) 			-> type_of_identifier s symbols
-		| _ -> raise(Failure"Integer required for matrix dimension/index")
+		| _ 				-> raise(Failure"Integer required for matrix dimension/index")
 
 	and lit_to_slit n = match n with
-		IntLit(n) -> SNumLit(SIntLit(n))
+		IntLit(n)     -> SNumLit(SIntLit(n))
 		| FloatLit(n) -> SNumLit(SFloatLit(n))
 
 	and typ_of_lit n = match n with
-		IntLit(n) -> Int
+		IntLit(n)     -> Int
 		| FloatLit(n) -> Float
 
 	and sexpr symbols = function
@@ -157,32 +168,32 @@ let check (globals, functions) =
 		| Id(s)                		-> SId(s, type_of_identifier s symbols)
 		| Binop(e1, op, e2)			-> 	let se1 = sexpr symbols e1 in
 										let se2 = sexpr symbols e2 in
-										let type1 = Sast.get_sexpr_type se1 in
-										let type2 = Sast.get_sexpr_type se2 in
+										let t1 = Sast.get_sexpr_type se1 in
+										let t2 = Sast.get_sexpr_type se2 in
 											(match op with
-											Equal | Neq -> check_eq_type se1 se2 op (type1, type2)
-											| And | Or -> check_log_type se1 se2 op (type1, type2)
-											| Less | Leq | Greater | Geq when type1 = type2 && (type1 = Int || type1 = Float) -> SBinop(se1, op, se2, type1)
-											| Add | Mult | Sub | Div -> check_arith_type se1 se2 op (type1, type2)
+											Equal | Neq -> check_eq_type se1 se2 op (t1, t2)
+											| And | Or -> check_log_type se1 se2 op (t1, t2)
+											| Less | Leq | Greater | Geq when (t1 = Int || t1 = Float) && t1 = t2 -> SBinop(se1, op, se2, t1)
+											| Add | Mult | Sub | Div -> check_arith_type se1 se2 op (t1, t2)
 											| _ -> raise (Failure "Invalid binary operator"))
 		| Unop(op, e)          		-> let se = sexpr symbols e in
-										let typ = Sast.get_sexpr_type se in
+										let t = Sast.get_sexpr_type se in
 										(match op with
-											Neg when typ = Int -> SUnop(op, se ,typ)
-											| Neg when typ = Float -> SUnop(op, se ,typ)
-											| Inc when typ = Int -> SUnop(op, se ,typ)
-											| Inc when typ = Float -> SUnop(op, se ,typ)
-											| Dec when typ = Int -> SUnop(op, se ,typ)
-											| Dec when typ = Float -> SUnop(op, se ,typ)
-											| Not when typ = Bool -> SUnop(op, se, typ)
+											Neg when t = Int -> SUnop(op, se ,t)
+											| Neg when t = Float -> SUnop(op, se ,t)
+											| Inc when t = Int -> SUnop(op, se ,t)
+											| Inc when t = Float -> SUnop(op, se ,t)
+											| Dec when t = Int -> SUnop(op, se ,t)
+											| Dec when t = Float -> SUnop(op, se ,t)
+											| Not when t = Bool -> SUnop(op, se, t)
 											| _ -> raise(Failure "Invalid datatype for unop")
 										)
 		| Assign(s,e) 				-> 	let se1 = sexpr symbols s in
 										let se2 = sexpr symbols e in
-										let type1 = Sast.get_sexpr_type se1 in
-										let type2 = Sast.get_sexpr_type se2 in
-											(if type1 = type2
-												then SAssign(se1, se2, type1)
+										let t1 = Sast.get_sexpr_type se1 in
+										let t2 = Sast.get_sexpr_type se2 in
+											(if t1 = t2
+												then SAssign(se1, se2, t1)
 											else raise(Failure "Mismatched assignment type"))
 		
 		| Call(fname, actuals)		-> let fd = function_decl fname in
@@ -191,8 +202,8 @@ let check (globals, functions) =
 								 		else
 								 			SCall(fname, List.map (sexpr symbols) actuals, fd.typ)
 		| Noexpr               		-> SNoexpr
-		| MatrixAccess(s, dim1, dim2)	-> 	ignore(check_expr_is_int symbols dim1);
-											ignore(check_expr_is_int symbols dim2);
+		| MatrixAccess(s, dim1, dim2)	-> 	ignore(check_is_int symbols dim1);
+											ignore(check_is_int symbols dim2);
 											let typ = type_of_identifier s symbols	in
 												(match typ with
 													Matrix(t,rows,cols) ->
@@ -209,31 +220,27 @@ let check (globals, functions) =
 														then ()
 														else raise(Failure "More than one datatype in a matrix" ))) nl) mlist);
 										SMatrixLit(smlist, entry_typ)
-		| Rows(s)					-> let typ = type_of_identifier s symbols in
-											(match typ with
+		| Rows(s)					-> (match type_of_identifier s symbols with
 												Matrix(_, r, _) -> 
 													(match r with IntLit(n) -> SRows(n) 
 														| _ -> raise(Failure "Integer required for matrix dimension"))
 												| _ -> raise(Failure"Cannot operate on nonmatrix"))
-		| Cols(s)					-> let typ = type_of_identifier s symbols in
-										(match typ with
+		| Cols(s)					-> (match type_of_identifier s symbols with
 											Matrix(_, _, c) -> 
 												(match c with IntLit(n) -> SCols(n) 
 															| _ -> raise(Failure"Integer required for matrix dimension"))
 											| _ -> raise(Failure"Cannot operate on nonmatrix"))
-		| Transpose(s)				-> let typ = type_of_identifier s symbols in
-										(match typ with
+		| Transpose(s)				-> (match type_of_identifier s symbols with
 											Matrix(t, r, c) -> STranspose(s, Matrix(t, c, r))
 											| _ -> raise(Failure"Cannot operate on nonmatrix"))									
-		| Trace(s)					-> let typ = type_of_identifier s symbols in
-										(match typ with 
+		| Trace(s)					-> (match type_of_identifier s symbols with 
 										Matrix(t, r, c) -> (if r = c then STrace(s, Matrix(t,r,c))
 																	else raise(Failure "Trace only operates on square matrices"))
 											| _ -> raise(Failure"Cannot operator on nonmatrix"))
-		| SubMatrix(s,e1,e2,e3,e4)  -> ignore(check_expr_is_int symbols e1);
-										ignore(check_expr_is_int symbols e2);
-										ignore(check_expr_is_int symbols e3);
-										ignore(check_expr_is_int symbols e4);
+		| SubMatrix(s,e1,e2,e3,e4)  -> ignore(check_is_int symbols e1);
+										ignore(check_is_int symbols e2);
+										ignore(check_is_int symbols e3);
+										ignore(check_is_int symbols e4);
 										let se1 = sexpr symbols e1 in
 										let se2 = sexpr symbols e2 in
 										let se3 = sexpr symbols e3 in
