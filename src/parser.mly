@@ -1,3 +1,11 @@
+/*
+  Jeffrey Monahan   - jm4155
+  Christine Pape    - cmp2223
+  Montana St. Pierre  - mrs2296
+  Shelley Zhong     - sz2699
+  Tengyu Zhou     - tz2338
+*/
+
 %{ open Ast %}
 
 /* Delimiters */
@@ -73,11 +81,11 @@ formal_list:
   | formal_list COMMA typ ID { ($3, $4) :: $1 }
 
 typ:
-    INT                                                                     { Int }
-  | FLOAT                                                                   { Float }
-  | BOOL                                                                    { Bool }
-  | VOID                                                                    { Void }
-  | STRING                                                                  { String }
+    INT       { Int }
+  | FLOAT     { Float }
+  | BOOL      { Bool }
+  | VOID      { Void }
+  | STRING    { String }
   | MATRIX typ LBRACKET NUM_LIT RBRACKET LBRACKET NUM_LIT RBRACKET   { Matrix($2, $4, $7) }
 
 vdecl_list:

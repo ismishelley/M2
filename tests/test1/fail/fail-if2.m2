@@ -1,6 +1,8 @@
 int main()
 {
   if (true) {
-    foo; /* Error: undeclared variable */
+    42;
+  } else {
+    bar; /* Error: undeclared variable */
   }
 }

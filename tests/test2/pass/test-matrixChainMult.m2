@@ -1,6 +1,5 @@
 int main(){
 	matrix int [1][7] p;
-	//matrix int [4][4] DP;
 	matrix int[6][6] DP;
 	int n;
 	int i;
@@ -14,7 +13,6 @@ int main(){
 
 	n = DP:cols;
 
-	//p = [[10, 100, 5, 50, 1]];
 	p = [[30,35,15,5,10,20,25]];
 
 	for (i = 0; i < DP:cols; ++i){
