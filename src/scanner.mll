@@ -1,3 +1,11 @@
+(*
+	Jeffrey Monahan 	- jm4155
+	Christine Pape 		- cmp2223
+	Montana St. Pierre 	- mrs2296
+	Shelley Zhong 		- sz2699
+	Tengyu Zhou 		- tz2338
+*)
+
 { open Parser }
 
 rule token = parse

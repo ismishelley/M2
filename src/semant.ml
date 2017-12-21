@@ -1,3 +1,11 @@
+(*
+	Jeffrey Monahan 	- jm4155
+	Christine Pape 		- cmp2223
+	Montana St. Pierre 	- mrs2296
+	Shelley Zhong 		- sz2699
+	Tengyu Zhou 		- tz2338
+*)
+
 open Ast
 open Sast
 
@@ -206,7 +214,7 @@ let check (globals, functions) =
 											ignore(check_is_int symbols dim2);
 											let typ = type_of_identifier s symbols	in
 												(match typ with
-													Matrix(t,rows,cols) ->
+													Matrix(t,r,c) ->
 														SMatrixAccess(s, sexpr symbols dim1, sexpr symbols dim2, t)
 													| _ -> raise(Failure "Cannot operate on nonmatrix")	)
 		| MatrixLit(mlist)			-> let smlist = (List.map (fun l -> (List.map lit_to_slit l)) mlist) in

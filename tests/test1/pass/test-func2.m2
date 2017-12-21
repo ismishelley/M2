@@ -1,5 +1,3 @@
-/* Bug noticed by Pin-Chin Huang */
-
 int fun(int x, int y)
 {
   return 0;

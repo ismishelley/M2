@@ -48,7 +48,7 @@ void myprint(matrix int [8][8] M) {
     for(i = 0; i < M:rows; ++i) {
         for(j = 0; j < M:cols; ++j) {
             printInt(M[i][j]);
-            printInt(1233);
+            printInt(999);
         }
         printStr("");
     }

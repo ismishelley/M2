@@ -1,7 +1,7 @@
 int main(){
 	String a;
-	a = "hello";
 	matrix int [3][2] m;
+	a = "hello";
   	m = [[2,9];
         [0,2];
         [1,1]];
